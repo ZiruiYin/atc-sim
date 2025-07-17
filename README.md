@@ -8,12 +8,13 @@ The implementation is in progress. TODOs:
 - [ ] Aircraft types (they all have the same performance for now)
 - [ ] Code refactoring (LOTS of hard-coded stuff! Also, the architecture is a mess...)
 - [ ] A side page to show the current aircrafts
+- [ ] Bug fix - runway 27 ILS seems problematic.
 
 ## Requirements
 - Python with pygame (`pip install pygame`)
 
 ## Commands
-Control aircraft using the following commands:
+Control aircraft using the following commands: Note that you should use the aircraft callsign first (type or click the aircraft) following with a space and the commands.
 
 ### Course Commands (C)
 - `C xxx` - Set heading (xxx = heading in degrees)
