@@ -379,6 +379,9 @@ class Aircraft:
         # Find target waypoint coordinates
         target_lat, target_lon = self.get_waypoint_coordinates(self.target_vor)
         if target_lat is None or target_lon is None:
+            print(f"{self.callsign}: Target WPT {self.target_vor} not found in navigation data")
+            self.target_vor = None
+            self.target_heading = self.heading  # Reset target heading
             return
         
         # Calculate distance to waypoint
@@ -899,7 +902,7 @@ class Aircraft:
                         if self.loc_intercepted:
                             print(f"{self.callsign}: Unable to comply - localizer intercepted, course commands disabled")
                         else:
-                            self.target_heading = None  # Clear any existing heading command
+                            self.target_heading = None  # Clear heading
                             self.target_vor = heading_str.upper()  # Convert to uppercase for consistency
                             self.turn_direction = turn_dir
                             turn_text = f" ({turn_dir})" if turn_dir else ""

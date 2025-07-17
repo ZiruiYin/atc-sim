@@ -330,7 +330,7 @@ class RadarDisplay:
         center_lat, center_lon = self.airport.get_coordinates()
         
         # ILS approach parameters
-        ils_approach_distance = 20  # Draw approaches up to 20 NM
+        ils_approach_distance = 15  # Draw approaches up to 15 NM
         pixels_per_nm = self.scale_factor / 60  # Pixels per nautical mile
         approach_distance_pixels = ils_approach_distance * pixels_per_nm
 
@@ -338,8 +338,7 @@ class RadarDisplay:
         altitude_constraints = [
             (5, 1590),
             (10, 3180),
-            (15, 4770),
-            (20, 6360)
+            (15, 4770)
         ]
         
         # Draw ILS for each runway
