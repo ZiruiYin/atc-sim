@@ -782,6 +782,31 @@ class Aircraft:
         
         return conditions_met, failed_conditions
     
+    def handle_short_final_and_ground(self, runway_info: dict):
+        """Handle short final approach and ground state transition"""
+        if not runway_info:
+            return
+        
+        # Get airport elevation
+        airport_elevation = getattr(self, 'airport_elevation', 83)
+        
+        # Calculate distance to runway
+        distance_nm = self.calculate_distance_to_runway_x()
+        
+        # Short final: 5nm out, slow to 140 knots (only if still on ILS approach)
+        if distance_nm <= 5.0 and self.altitude > airport_elevation and self.ils_cleared and self.loc_intercepted and self.gs_intercepted:
+            if self.target_airspeed > 140:
+                self.target_airspeed = 140
+        
+        # Ground state transition: altitude below or at airport elevation
+        if self.altitude <= airport_elevation and not self.on_ground:
+            self.on_ground = True
+            # Clear all ILS states since were on theground
+            self.ils_cleared = False
+            self.loc_intercepted = False
+            self.gs_intercepted = False
+            self.lower_than_gs = False
+
     def process_command(self, command_parts: List[str], navigation_data=None):
         """Process ATC command"""
         if not command_parts:
@@ -836,23 +861,25 @@ class Aircraft:
                     param = command_parts[i + 1]
                     turn_dir = None
                     
-                    # Check for turn direction modifier
-                    if i + 2 < len(command_parts) and command_parts[i + 2] in ['L', 'R']:
-                        turn_dir = command_parts[i + 2]
-                        i += 1
+                    # First check for a turn direction suffix in the param itself
+                    turn_dir = None
+                    heading_str = param
+                    if param and param[-1].upper() in ['L', 'R']:
+                        turn_dir = param[-1].upper()
+                        heading_str = param[:-1]  # Remove the turn direction suffix
                     
-                    if param.isdigit():
-                        if len(param) == 3:
+                    if heading_str.isdigit():
+                        if len(heading_str) == 3:
                             # 3 digits = heading - check if LOC intercepted
                             if self.loc_intercepted:
                                 print(f"{self.callsign}: Unable to comply - localizer intercepted, heading commands disabled")
                             else:
-                                self.target_heading = int(param)
+                                self.target_heading = int(heading_str)
                                 self.target_vor = None  # Clear waypoint navigation
                                 self.turn_direction = turn_dir
                                 turn_text = f" ({turn_dir})" if turn_dir else ""
-                                print(f"{self.callsign}: Set heading {param}°{turn_text}")
-                        elif len(param) <= 2:
+                                print(f"{self.callsign}: Set heading {heading_str}°{turn_text}")
+                        elif len(heading_str) <= 2:
                             # 1-2 digits = altitude in thousands - check if GS intercepted
                             if self.gs_intercepted:
                                 print(f"{self.callsign}: Unable to comply - glideslope intercepted, altitude commands disabled")
@@ -942,29 +969,4 @@ class Aircraft:
             else:
                 i += 1
         
-        return True 
-
-    def handle_short_final_and_ground(self, runway_info: dict):
-        """Handle short final approach and ground state transition"""
-        if not runway_info:
-            return
-        
-        # Get airport elevation
-        airport_elevation = getattr(self, 'airport_elevation', 83)
-        
-        # Calculate distance to runway
-        distance_nm = self.calculate_distance_to_runway_x()
-        
-        # Short final: 5nm out, slow to 140 knots (only if still on ILS approach)
-        if distance_nm <= 5.0 and self.altitude > airport_elevation and self.ils_cleared and self.loc_intercepted and self.gs_intercepted:
-            if self.target_airspeed > 140:
-                self.target_airspeed = 140
-        
-        # Ground state transition: altitude below or at airport elevation
-        if self.altitude <= airport_elevation and not self.on_ground:
-            self.on_ground = True
-            # Clear all ILS states since were on theground
-            self.ils_cleared = False
-            self.loc_intercepted = False
-            self.gs_intercepted = False
-            self.lower_than_gs = False
+        return True
