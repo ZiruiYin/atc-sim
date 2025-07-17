@@ -8,10 +8,15 @@ The implementation is in progress. TODOs:
 - [ ] Aircraft types (they all have the same performance for now)
 - [ ] Code refactoring (LOTS of hard-coded stuff! Also, the architecture is a mess...)
 - [ ] A side page to show the current aircrafts
-- [ ] Bug fix - runway 27 ILS seems problematic.
 
 ## Requirements
 - Python with pygame (`pip install pygame`)
+
+## How to run
+1. Clone the repo
+2. Install dependencies
+3. `cd src`
+4. `python main.py`
 
 ## Commands
 Control aircraft using the following commands: Note that you should use the aircraft callsign first (type or click the aircraft) following with a space and the commands.
@@ -28,7 +33,8 @@ Control aircraft using the following commands: Note that you should use the airc
 - `L [runway]` - Clear for ILS approach to specified runway
   - Must be within 15nm of airport
   - Must be below 5000 feet AGL
-  - Must be below 200 knots
+  - Must be below 220 knots
+Note that the aircraft will automatically slow to 140kts on 5nm short final
 
 ### Hold Commands (H)
 - `H [waypoint]` - Hold at specified waypoint
