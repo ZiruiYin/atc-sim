@@ -15,7 +15,7 @@ class Aircraft:
         self.callsign = callsign
         self.x = initial_x
         self.y = initial_y
-        self.heading = heading  # degrees (0-359)
+        self.heading = heading  # degrees (0-360)
         self.altitude = altitude  # feet
         self.airspeed = airspeed  # knots
         
@@ -738,11 +738,14 @@ class Aircraft:
         
         return None, None
     
-    def check_ils_clearance_conditions(self) -> bool:
+    def check_ils_clearance_conditions(self) -> tuple[bool, list[str]]:
         """Check if aircraft meets ILS clearance conditions during command processing"""
+        conditions_met = True
+        failed_conditions = []
+        
         # Check if we have airport center coordinates
         if not hasattr(self, 'airport_center_lat') or not hasattr(self, 'airport_center_lon'):
-            return False
+            return False, ["Airport reference data not available"]
         
         # Get screen dimensions and scale factor
         screen_width = getattr(self, 'screen_width', 1600)
@@ -762,19 +765,22 @@ class Aircraft:
             self.airport_center_lat, self.airport_center_lon
         )
         if distance_nm > 15:
-            return False
+            conditions_met = False
+            failed_conditions.append(f"Aircraft too far from airport: {int(distance_nm)}nm (max 15nm)")
         
         # Altitude check: less than 5000 AGL
         # Assuming airport elevation is around 80 feet (EGLL)
         agl = self.altitude - 83
         if agl >= 5000:
-            return False
+            conditions_met = False
+            failed_conditions.append(f"Aircraft too high: {int(agl)}ft AGL (max 5000ft)")
         
         # Airspeed check: within 200kts
-        if self.airspeed > 200:
-            return False
+        if self.airspeed > 220:
+            conditions_met = False
+            failed_conditions.append(f"Aircraft too fast: {int(self.airspeed)}kts (max 220kts)")
         
-        return True
+        return conditions_met, failed_conditions
     
     def process_command(self, command_parts: List[str], navigation_data=None):
         """Process ATC command"""
@@ -878,7 +884,8 @@ class Aircraft:
                     runway = command_parts[i + 1]
                     
                     # Check if aircraft meets ILS interception conditions
-                    if self.check_ils_clearance_conditions():
+                    conditions_met, failed_conditions = self.check_ils_clearance_conditions()
+                    if conditions_met:
                         self.target_runway = runway
                         self.ils_runway = runway
                         self.ils_cleared = True
@@ -887,7 +894,9 @@ class Aircraft:
                         self.clear_hold_pattern()  # Clear hold pattern
                         print(f"{self.callsign}: Cleared ILS approach runway {runway}")
                     else:
-                        print(f"{self.callsign}: Unable to comply - outside ILS approach parameters")
+                        print(f"{self.callsign}: Unable to comply - ILS approach requirements not met:")
+                        for condition in failed_conditions:
+                            print(f"{self.callsign}: {condition}")
                     i += 2
                 else:
                     i += 1
