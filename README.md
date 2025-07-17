@@ -8,6 +8,7 @@ The implementation is in progress. TODOs:
 - [ ] Aircraft types (they all have the same performance for now)
 - [ ] Code refactoring (LOTS of hard-coded stuff! Also, the architecture is a mess...)
 - [ ] A side page to show the current aircrafts
+- [ ] Bug fix - runway 27 ILS seems problematic.
 
 ## Requirements
 - Python with pygame (`pip install pygame`)
