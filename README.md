@@ -23,7 +23,7 @@ Control aircraft using the following commands: Note that you should use the airc
 
 ### Course Commands (C)
 - `C xxx` - Set heading (xxx = heading in degrees)
-  - Optional: Add L/R for specific turn direction (e.g., `C 090 L`)
+  - Optional: Add L/R (w/o space) for specific turn direction (e.g., `C 090L`)
 - `C x/xx` - Set altitude (x/xx = altitude in thousands of feet)
   - Optional: Add X for expedited climb/descent (e.g., `C 5 X`)
 - `C [waypoint]` - Direct aircraft to waypoint
