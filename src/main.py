@@ -47,7 +47,10 @@ def main():
         
         # Create radar display
         print("Initializing radar display...")
-        radar = RadarDisplay(1600, 1000)
+        info = pygame.display.Info()
+        screen_width = info.current_w
+        screen_height = info.current_h
+        radar = RadarDisplay(screen_width, screen_height)
         radar.set_airport(airport)
         radar.set_navigation(navigation)
         radar.set_spawn_rate(2.0)  # 2 aircraft per minute

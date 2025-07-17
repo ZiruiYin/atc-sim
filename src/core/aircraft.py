@@ -893,15 +893,17 @@ class Aircraft:
                                     print(f"{self.callsign}: Cleared to {self.target_altitude} feet, expedite")
                                 else:
                                     print(f"{self.callsign}: Cleared to {self.target_altitude} feet")
+                    # Non-numeric input is treated as a waypoint/VOR identifier
+                    else:
+                        # Check if LOC intercepted
+                        if self.loc_intercepted:
+                            print(f"{self.callsign}: Unable to comply - localizer intercepted, course commands disabled")
                         else:
-                            # VOR/waypoint station - check if LOC intercepted
-                            if self.loc_intercepted:
-                                print(f"{self.callsign}: Unable to comply - localizer intercepted, course commands disabled")
-                            else:
-                                self.target_vor = param
-                                self.turn_direction = turn_dir
-                                turn_text = f" ({turn_dir})" if turn_dir else ""
-                                print(f"{self.callsign}: Set course to {param} waypoint{turn_text}")
+                            self.target_heading = None  # Clear any existing heading command
+                            self.target_vor = heading_str.upper()  # Convert to uppercase for consistency
+                            self.turn_direction = turn_dir
+                            turn_text = f" ({turn_dir})" if turn_dir else ""
+                            print(f"{self.callsign}: Set course to {heading_str.upper()} waypoint{turn_text}")
                     i += 2
                 else:
                     i += 1
