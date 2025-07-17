@@ -10,7 +10,7 @@ from utils.math_utils import lat_lon_to_pixels, distance_between_points
 
 
 class RadarDisplay:
-    def __init__(self, screen_width: int = 1200, screen_height: int = 800):
+    def __init__(self, screen_width: int = None, screen_height: int = None):
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.scale_factor = 800  # Pixels per degree (zoom level)
