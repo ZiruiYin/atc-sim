@@ -103,10 +103,13 @@ def main():
                     if event.key == pygame.K_ESCAPE:
                         running = False
                     else:
-                        radar.handle_event(event)
+                        # Check if event should exit (crash occurred)
+                        if radar.handle_event(event):
+                            running = False
                 else:
                     # Pass all other events (including mouse events) to radar display
-                    radar.handle_event(event)
+                    if radar.handle_event(event):
+                        running = False
             
             # Update aircraft
             radar.update_aircraft(dt)
