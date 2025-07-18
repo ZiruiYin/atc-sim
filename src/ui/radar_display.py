@@ -6,6 +6,7 @@ from core.airport import Airport
 from core.navigation import Navigation
 from core.aircraft import Aircraft
 from core.aircraft_spawner import AircraftSpawner
+from core.collision import CollisionDetector
 from utils.math_utils import lat_lon_to_pixels, distance_between_points
 
 
@@ -35,6 +36,7 @@ class RadarDisplay:
         self.COLOR_TRAJECTORY = (100, 100, 100)  # Gray
         self.COLOR_ILS = (255, 0, 255)       # Magenta
         self.COLOR_SELECTED = (255, 255, 0)  # Yellow for selected aircraft
+        self.COLOR_WARNING = (255, 0, 0)     # Red for collision warnings
         
         # Fonts
         self.font_large = None
@@ -60,6 +62,9 @@ class RadarDisplay:
         
         # Aircraft selection
         self.selected_aircraft = None
+        
+        # Collision detection
+        self.collision_detector = CollisionDetector()
         
         # Initialize pygame
         pygame.init()
@@ -518,8 +523,13 @@ class RadarDisplay:
         # Draw localizer guidance line if cleared for ILS
         self.draw_localizer_guidance(aircraft)
         
-        # Choose color based on selection status
-        aircraft_color = self.COLOR_SELECTED if aircraft == self.selected_aircraft else self.COLOR_AIRCRAFT
+        # Choose color based on selection status and collision warnings
+        if self.collision_detector.is_aircraft_in_warning(aircraft.callsign):
+            aircraft_color = self.COLOR_WARNING
+        elif aircraft == self.selected_aircraft:
+            aircraft_color = self.COLOR_SELECTED
+        else:
+            aircraft_color = self.COLOR_AIRCRAFT
         
         # Draw aircraft symbol (circle)
         pygame.draw.circle(self.screen, aircraft_color, (int(x), int(y)), 6, 2)
@@ -664,6 +674,10 @@ class RadarDisplay:
     
     def update_aircraft(self, dt: float):
         """Update all aircraft positions and spawn new aircraft"""
+        # Check if game is frozen due to crash
+        if self.collision_detector.is_game_frozen():
+            return
+        
         # Spawn new aircraft
         new_aircraft = self.aircraft_spawner.update(self.aircraft)
         for aircraft in new_aircraft:
@@ -707,6 +721,20 @@ class RadarDisplay:
                 print(f"{aircraft.callsign}: Removed from simulation (landed)")
             else:
                 print(f"{aircraft.callsign}: Removed from simulation (left radar coverage)")
+        
+        # Update collision detection
+        if self.airport:
+            airport_center_lat, airport_center_lon = self.airport.get_coordinates()
+            self.collision_detector.update_aircraft_positions(
+                self.aircraft, airport_center_lat, airport_center_lon,
+                self.screen_width, self.screen_height, self.scale_factor
+            )
+            
+            # Check for collisions
+            game_should_continue = self.collision_detector.check_collisions(self.aircraft)
+            if not game_should_continue:
+                # Crash occurred, game is frozen
+                pass
     
     def get_runway_data_for_aircraft(self) -> dict:
         """Get runway data in format expected by aircraft"""
@@ -760,6 +788,31 @@ class RadarDisplay:
     
     def draw_command_input(self):
         """Draw command input textbox at the bottom"""
+        # Check if game is frozen due to crash
+        if self.collision_detector.is_game_frozen():
+            # Draw crash message instead of command input
+            crash_message = self.collision_detector.get_crash_message()
+            text_surface = self.font_large.render(crash_message, True, self.COLOR_WARNING)
+            text_rect = text_surface.get_rect()
+            text_rect.centerx = self.screen_width // 2
+            text_rect.y = self.screen_height - 100
+            
+            # Draw background for crash message
+            bg_rect = pygame.Rect(text_rect.x - 20, text_rect.y - 10, text_rect.width + 40, text_rect.height + 20)
+            pygame.draw.rect(self.screen, (0, 0, 0), bg_rect)
+            pygame.draw.rect(self.screen, self.COLOR_WARNING, bg_rect, 3)
+            
+            self.screen.blit(text_surface, text_rect)
+            
+            # Draw restart instruction
+            restart_text = "Press ESC to exit"
+            restart_surface = self.font_medium.render(restart_text, True, self.COLOR_TEXT)
+            restart_rect = restart_surface.get_rect()
+            restart_rect.centerx = self.screen_width // 2
+            restart_rect.y = self.screen_height - 60
+            self.screen.blit(restart_surface, restart_rect)
+            return
+        
         # Command input box
         box_height = 30
         box_y = self.screen_height - box_height - 10
@@ -829,6 +882,23 @@ class RadarDisplay:
         
         # Draw text
         self.screen.blit(text, (x, y))
+        
+        # Draw collision warnings if any
+        warning_aircraft = self.collision_detector.get_warning_aircraft()
+        if warning_aircraft:
+            warning_text = f"COLLISION WARNINGS: {len(warning_aircraft)} aircraft"
+            warning_surface = self.font_small.render(warning_text, True, self.COLOR_WARNING)
+            warning_rect = warning_surface.get_rect()
+            warning_x = self.screen_width - warning_rect.width - 10
+            warning_y = y + text_rect.height + 5
+            
+            # Draw background for warning
+            warning_bg_rect = pygame.Rect(warning_x - 5, warning_y - 2, warning_rect.width + 10, warning_rect.height + 4)
+            pygame.draw.rect(self.screen, (0, 0, 0), warning_bg_rect)
+            pygame.draw.rect(self.screen, self.COLOR_WARNING, warning_bg_rect, 2)
+            
+            # Draw warning text
+            self.screen.blit(warning_surface, (warning_x, warning_y))
     
     def cycle_procedures(self):
         """Cycle through available procedures"""
@@ -894,6 +964,13 @@ class RadarDisplay:
     
     def handle_event(self, event):
         """Handle pygame events"""
+        # Check if game is frozen due to crash
+        if self.collision_detector.is_game_frozen():
+            # Only allow ESC key when game is frozen
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return True  # Signal to exit
+            return False  # Ignore all other events
+        
         if event.type == pygame.MOUSEBUTTONDOWN:
             # Handle mouse clicks for aircraft selection
             if event.button == 1:  # Left click
