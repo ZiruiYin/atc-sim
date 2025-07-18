@@ -2,12 +2,12 @@ This is an ATC simulator game for London Heathrow airport (EGLL/LHR), inspired b
 
 The implementation is in progress. TODOs:
 - [ ] More realistic constraints (speed, altitude, ILS interception angle restrictions, etc.)
-- [ ] Collision warning system
 - [ ] Scoring system
 - [ ] Departure aircraft functionality (all aircrafts right now are arrival traffic)
 - [ ] Aircraft types (they all have the same performance for now)
 - [ ] Code refactoring (LOTS of hard-coded stuff! Also, the architecture is a mess...)
 - [ ] A side page to show the current aircrafts
+- [ ] Scaling issues (so done with having lon,lat vs. nm vs. pixels... need to find a uniform scale)
 
 ## Requirements
 - Python with pygame (`pip install pygame`)
