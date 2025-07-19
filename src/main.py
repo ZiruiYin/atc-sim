@@ -66,7 +66,6 @@ def main():
         print("  T - Toggle legend")
         print("  P - Cycle procedures (SID/STAR)")
         print("  L - Lock/unlock display controls")
-        print("  +/- - Zoom in/out")
         print("  ↑/↓ - Increase/decrease spawn rate")
         print("  ESC - Exit")
         print("\nSpawn Rate: 2.0 aircraft per minute")
