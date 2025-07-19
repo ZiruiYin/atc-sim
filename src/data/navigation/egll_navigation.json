@@ -4,20 +4,28 @@
     "vor_stations": {
       "LON": {
         "name": "LONDON",
-        "frequency": 113.60,
+        "frequency": 113.6,
         "coordinates": {
           "latitude": 51.4743,
-          "longitude": -0.4581
+          "longitude": -0.4581,
+          "nm_coordinates": {
+            "x": 0.13,
+            "y": 0.18
+          }
         },
         "distance_from_airport": 1.1,
         "bearing_from_airport": 348
       },
       "OCK": {
         "name": "OCKHAM",
-        "frequency": 115.30,
+        "frequency": 115.3,
         "coordinates": {
           "latitude": 51.3156,
-          "longitude": -0.4486
+          "longitude": -0.4486,
+          "nm_coordinates": {
+            "x": 0.48,
+            "y": -9.34
+          }
         },
         "distance_from_airport": 11.5,
         "bearing_from_airport": 176
@@ -27,47 +35,67 @@
         "frequency": 113.75,
         "coordinates": {
           "latitude": 51.6425,
-          "longitude": -0.5475
+          "longitude": -0.5475,
+          "nm_coordinates": {
+            "x": -3.22,
+            "y": 10.28
+          }
         },
         "distance_from_airport": 18.0,
         "bearing_from_airport": 347
       },
       "BIG": {
         "name": "BIGGIN",
-        "frequency": 115.10,
+        "frequency": 115.1,
         "coordinates": {
           "latitude": 51.3306,
-          "longitude": -0.0325
+          "longitude": -0.0325,
+          "nm_coordinates": {
+            "x": 16.04,
+            "y": -8.44
+          }
         },
         "distance_from_airport": 23.5,
         "bearing_from_airport": 114
       },
       "BPK": {
         "name": "BROOKMANS PARK",
-        "frequency": 117.50,
+        "frequency": 117.5,
         "coordinates": {
           "latitude": 51.7472,
-          "longitude": -0.1833
+          "longitude": -0.1833,
+          "nm_coordinates": {
+            "x": 10.4,
+            "y": 16.57
+          }
         },
         "distance_from_airport": 24.5,
         "bearing_from_airport": 38
       },
       "LAM": {
         "name": "LAMBOURNE",
-        "frequency": 115.60,
+        "frequency": 115.6,
         "coordinates": {
           "latitude": 51.6306,
-          "longitude": 0.1833
+          "longitude": 0.1833,
+          "nm_coordinates": {
+            "x": 24.11,
+            "y": 9.57
+          }
         },
         "distance_from_airport": 29.0,
         "bearing_from_airport": 65
       },
       "MID": {
         "name": "MIDHURST",
-        "frequency": 114.00,
+        "frequency": 114.0,
         "coordinates": {
           "latitude": 51.0306,
-          "longitude": -0.7542
+          "longitude": -0.7542,
+          "nm_coordinates": {
+            "x": -10.95,
+            "y": -26.45
+          }
         },
         "distance_from_airport": 29.7,
         "bearing_from_airport": 193
@@ -77,27 +105,39 @@
         "frequency": 114.35,
         "coordinates": {
           "latitude": 51.4583,
-          "longitude": -1.3194
+          "longitude": -1.3194,
+          "nm_coordinates": {
+            "x": -32.09,
+            "y": -0.78
+          }
         },
         "distance_from_airport": 32.7,
         "bearing_from_airport": 272
       },
       "MAY": {
         "name": "MAYFIELD",
-        "frequency": 117.90,
+        "frequency": 117.9,
         "coordinates": {
           "latitude": 51.0944,
-          "longitude": 0.2472
+          "longitude": 0.2472,
+          "nm_coordinates": {
+            "x": 26.5,
+            "y": -22.62
+          }
         },
         "distance_from_airport": 40.1,
         "bearing_from_airport": 141
       },
       "CFD": {
         "name": "CRANFIELD",
-        "frequency": 116.50,
+        "frequency": 116.5,
         "coordinates": {
           "latitude": 51.9833,
-          "longitude": -0.6167
+          "longitude": -0.6167,
+          "nm_coordinates": {
+            "x": -5.81,
+            "y": 30.74
+          }
         },
         "distance_from_airport": 42.1,
         "bearing_from_airport": 351
@@ -107,7 +147,11 @@
         "frequency": 116.25,
         "coordinates": {
           "latitude": 51.9667,
-          "longitude": -0.0833
+          "longitude": -0.0833,
+          "nm_coordinates": {
+            "x": 14.14,
+            "y": 29.75
+          }
         },
         "distance_from_airport": 42.2,
         "bearing_from_airport": 32
@@ -117,17 +161,25 @@
         "frequency": 114.75,
         "coordinates": {
           "latitude": 50.8597,
-          "longitude": -0.7597
+          "longitude": -0.7597,
+          "nm_coordinates": {
+            "x": -11.15,
+            "y": -36.72
+          }
         },
         "distance_from_airport": 44.4,
         "bearing_from_airport": 196
       },
       "DET": {
         "name": "DETLING",
-        "frequency": 117.30,
+        "frequency": 117.3,
         "coordinates": {
           "latitude": 51.3972,
-          "longitude": 0.6722
+          "longitude": 0.6722,
+          "nm_coordinates": {
+            "x": 42.4,
+            "y": -4.44
+          }
         },
         "distance_from_airport": 47.1,
         "bearing_from_airport": 104
@@ -139,7 +191,11 @@
         "frequency": 348,
         "coordinates": {
           "latitude": 51.3472,
-          "longitude": -0.5583
+          "longitude": -0.5583,
+          "nm_coordinates": {
+            "x": -3.62,
+            "y": -7.45
+          }
         },
         "distance_from_airport": 9.7,
         "bearing_from_airport": 207
@@ -148,8 +204,12 @@
         "name": "BURNHAM",
         "frequency": 421,
         "coordinates": {
-          "latitude": 51.5250,
-          "longitude": -0.6583
+          "latitude": 51.525,
+          "longitude": -0.6583,
+          "nm_coordinates": {
+            "x": -7.36,
+            "y": 3.23
+          }
         },
         "distance_from_airport": 9.8,
         "bearing_from_airport": 289
@@ -159,7 +219,11 @@
         "frequency": 277,
         "coordinates": {
           "latitude": 51.6472,
-          "longitude": -0.5500
+          "longitude": -0.55,
+          "nm_coordinates": {
+            "x": -3.31,
+            "y": 10.57
+          }
         },
         "distance_from_airport": 10.8,
         "bearing_from_airport": 346
@@ -168,8 +232,12 @@
         "name": "EPSOM",
         "frequency": 316,
         "coordinates": {
-          "latitude": 51.3250,
-          "longitude": -0.2583
+          "latitude": 51.325,
+          "longitude": -0.2583,
+          "nm_coordinates": {
+            "x": 7.6,
+            "y": -8.78
+          }
         },
         "distance_from_airport": 11.2,
         "bearing_from_airport": 159
@@ -179,7 +247,11 @@
         "frequency": 352,
         "coordinates": {
           "latitude": 51.4583,
-          "longitude": -0.8750
+          "longitude": -0.875,
+          "nm_coordinates": {
+            "x": -15.47,
+            "y": -0.78
+          }
         },
         "distance_from_airport": 18.0,
         "bearing_from_airport": 265
@@ -189,7 +261,11 @@
         "frequency": 328,
         "coordinates": {
           "latitude": 51.3244,
-          "longitude": -0.8472
+          "longitude": -0.8472,
+          "nm_coordinates": {
+            "x": -14.43,
+            "y": -8.82
+          }
         },
         "distance_from_airport": 19.4,
         "bearing_from_airport": 238
@@ -199,7 +275,11 @@
         "frequency": 343,
         "coordinates": {
           "latitude": 51.2139,
-          "longitude": -0.1472
+          "longitude": -0.1472,
+          "nm_coordinates": {
+            "x": 11.75,
+            "y": -15.45
+          }
         },
         "distance_from_airport": 22.5,
         "bearing_from_airport": 141
@@ -209,7 +289,11 @@
         "frequency": 322,
         "coordinates": {
           "latitude": 51.5083,
-          "longitude": 0.0556
+          "longitude": 0.0556,
+          "nm_coordinates": {
+            "x": 19.34,
+            "y": 2.23
+          }
         },
         "distance_from_airport": 22.9,
         "bearing_from_airport": 84
@@ -219,7 +303,11 @@
         "frequency": 433,
         "coordinates": {
           "latitude": 51.6944,
-          "longitude": -0.8472
+          "longitude": -0.8472,
+          "nm_coordinates": {
+            "x": -14.43,
+            "y": 13.4
+          }
         },
         "distance_from_airport": 24.4,
         "bearing_from_airport": 324
@@ -229,7 +317,11 @@
         "frequency": 345,
         "coordinates": {
           "latitude": 51.8806,
-          "longitude": -0.3667
+          "longitude": -0.3667,
+          "nm_coordinates": {
+            "x": 3.54,
+            "y": 24.58
+          }
         },
         "distance_from_airport": 30.6,
         "bearing_from_airport": 17
@@ -239,183 +331,313 @@
       "BUZAD": {
         "name": "BUZAD",
         "coordinates": {
-          "latitude": 51.8500,
-          "longitude": -0.4667
+          "latitude": 51.85,
+          "longitude": -0.4667,
+          "nm_coordinates": {
+            "x": -0.2,
+            "y": 22.74
+          }
         },
         "type": "SID",
-        "procedures": ["BUZAD4J", "BUZAD4K"]
+        "procedures": [
+          "BUZAD4J",
+          "BUZAD4K"
+        ]
       },
       "WOBUN": {
         "name": "WOBUN",
         "coordinates": {
           "latitude": 51.8333,
-          "longitude": -0.4500
+          "longitude": -0.45,
+          "nm_coordinates": {
+            "x": 0.43,
+            "y": 21.74
+          }
         },
         "type": "SID",
-        "procedures": ["WOBUN4J", "WOBUN4K"]
+        "procedures": [
+          "WOBUN4J",
+          "WOBUN4K"
+        ]
       },
       "BOVVA": {
         "name": "BOVVA",
         "coordinates": {
           "latitude": 51.6425,
-          "longitude": -0.5475
+          "longitude": -0.5475,
+          "nm_coordinates": {
+            "x": -3.22,
+            "y": 10.28
+          }
         },
         "type": "STAR",
-        "procedures": ["BOVVA1A", "BOVVA1B"]
+        "procedures": [
+          "BOVVA1A",
+          "BOVVA1B"
+        ]
       },
       "TOMMO": {
         "name": "TOMMO",
         "coordinates": {
           "latitude": 51.3156,
-          "longitude": -0.4486
+          "longitude": -0.4486,
+          "nm_coordinates": {
+            "x": 0.48,
+            "y": -9.34
+          }
         },
         "type": "STAR",
-        "procedures": ["TOMMO1A", "TOMMO1B"]
+        "procedures": [
+          "TOMMO1A",
+          "TOMMO1B"
+        ]
       },
       "FINCH": {
         "name": "FINCH",
         "coordinates": {
-          "latitude": 51.5500,
-          "longitude": -0.3833
+          "latitude": 51.55,
+          "longitude": -0.3833,
+          "nm_coordinates": {
+            "x": 2.92,
+            "y": 4.73
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various SIDs"]
+        "procedures": [
+          "Various SIDs"
+        ]
       },
       "FRANK": {
         "name": "FRANK",
         "coordinates": {
           "latitude": 51.5833,
-          "longitude": -0.3167
+          "longitude": -0.3167,
+          "nm_coordinates": {
+            "x": 5.41,
+            "y": 6.73
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various SIDs"]
+        "procedures": [
+          "Various SIDs"
+        ]
       },
       "DONNA": {
         "name": "DONNA",
         "coordinates": {
           "latitude": 51.6167,
-          "longitude": -0.2500
+          "longitude": -0.25,
+          "nm_coordinates": {
+            "x": 7.91,
+            "y": 8.73
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various SIDs"]
+        "procedures": [
+          "Various SIDs"
+        ]
       },
       "HEMEL": {
         "name": "HEMEL",
         "coordinates": {
-          "latitude": 51.7500,
-          "longitude": -0.4500
+          "latitude": 51.75,
+          "longitude": -0.45,
+          "nm_coordinates": {
+            "x": 0.43,
+            "y": 16.74
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       },
       "FIMLI": {
         "name": "FIMLI",
         "coordinates": {
-          "latitude": 51.4000,
-          "longitude": -0.5000
+          "latitude": 51.4,
+          "longitude": -0.5,
+          "nm_coordinates": {
+            "x": -1.44,
+            "y": -4.28
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       },
       "BAPAG": {
         "name": "BAPAG",
         "coordinates": {
-          "latitude": 51.7000,
-          "longitude": -0.6000
+          "latitude": 51.7,
+          "longitude": -0.6,
+          "nm_coordinates": {
+            "x": -5.18,
+            "y": 13.74
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       },
       "HOGBA": {
         "name": "HOGBA",
         "coordinates": {
-          "latitude": 51.3500,
-          "longitude": -0.3000
+          "latitude": 51.35,
+          "longitude": -0.3,
+          "nm_coordinates": {
+            "x": 6.04,
+            "y": -7.28
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       },
       "VATON": {
         "name": "VATON",
         "coordinates": {
-          "latitude": 51.6000,
-          "longitude": -0.5500
+          "latitude": 51.6,
+          "longitude": -0.55,
+          "nm_coordinates": {
+            "x": -3.31,
+            "y": 7.73
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       },
       "WATFO": {
         "name": "WATFO",
         "coordinates": {
-          "latitude": 51.5500,
-          "longitude": -0.6000
+          "latitude": 51.55,
+          "longitude": -0.6,
+          "nm_coordinates": {
+            "x": -5.18,
+            "y": 4.73
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       },
       "RODNI": {
         "name": "RODNI",
         "coordinates": {
-          "latitude": 51.4500,
-          "longitude": -0.2500
+          "latitude": 51.45,
+          "longitude": -0.25,
+          "nm_coordinates": {
+            "x": 7.91,
+            "y": -1.27
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       },
       "TAGOX": {
         "name": "TAGOX",
         "coordinates": {
-          "latitude": 51.8000,
-          "longitude": -0.3500
+          "latitude": 51.8,
+          "longitude": -0.35,
+          "nm_coordinates": {
+            "x": 4.17,
+            "y": 19.74
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       },
       "IPRIL": {
         "name": "IPRIL",
         "coordinates": {
-          "latitude": 51.3000,
-          "longitude": -0.4000
+          "latitude": 51.3,
+          "longitude": -0.4,
+          "nm_coordinates": {
+            "x": 2.3,
+            "y": -10.28
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       },
       "DORKI": {
         "name": "DORKI",
         "coordinates": {
-          "latitude": 51.7500,
-          "longitude": -0.2000
+          "latitude": 51.75,
+          "longitude": -0.2,
+          "nm_coordinates": {
+            "x": 9.78,
+            "y": 16.74
+          }
         },
         "type": "INTERMEDIATE",
-        "procedures": ["Various procedures"]
+        "procedures": [
+          "Various procedures"
+        ]
       }
     },
     "sid_procedures": {
       "BUZAD4J": {
         "name": "BUZAD DEPARTURE",
         "runway": "09L",
-        "route": ["EGLL", "FINCH", "FRANK", "DONNA", "BUZAD"],
+        "route": [
+          "EGLL",
+          "FINCH",
+          "FRANK",
+          "DONNA",
+          "BUZAD"
+        ],
         "initial_altitude": 6000,
         "final_altitude": "FL190+"
       },
       "BUZAD4K": {
         "name": "BUZAD DEPARTURE",
         "runway": "09R",
-        "route": ["EGLL", "FINCH", "FRANK", "DONNA", "BUZAD"],
+        "route": [
+          "EGLL",
+          "FINCH",
+          "FRANK",
+          "DONNA",
+          "BUZAD"
+        ],
         "initial_altitude": 6000,
         "final_altitude": "FL190+"
       },
       "WOBUN4J": {
         "name": "WOBUN DEPARTURE",
         "runway": "09L",
-        "route": ["EGLL", "FINCH", "FRANK", "DONNA", "WOBUN"],
+        "route": [
+          "EGLL",
+          "FINCH",
+          "FRANK",
+          "DONNA",
+          "WOBUN"
+        ],
         "initial_altitude": 6000,
         "final_altitude": "FL190+"
       },
       "WOBUN4K": {
         "name": "WOBUN DEPARTURE",
         "runway": "09R",
-        "route": ["EGLL", "FINCH", "FRANK", "DONNA", "WOBUN"],
+        "route": [
+          "EGLL",
+          "FINCH",
+          "FRANK",
+          "DONNA",
+          "WOBUN"
+        ],
         "initial_altitude": 6000,
         "final_altitude": "FL190+"
       }
@@ -424,28 +646,44 @@
       "BOVVA1A": {
         "name": "BOVVA ARRIVAL",
         "runway": "27L",
-        "route": ["BOVVA", "BNN", "EGLL"],
+        "route": [
+          "BOVVA",
+          "BNN",
+          "EGLL"
+        ],
         "initial_altitude": "FL100",
         "final_altitude": 2000
       },
       "BOVVA1B": {
         "name": "BOVVA ARRIVAL",
         "runway": "27R",
-        "route": ["BOVVA", "BNN", "EGLL"],
+        "route": [
+          "BOVVA",
+          "BNN",
+          "EGLL"
+        ],
         "initial_altitude": "FL100",
         "final_altitude": 2000
       },
       "TOMMO1A": {
         "name": "TOMMO ARRIVAL",
         "runway": "27L",
-        "route": ["TOMMO", "OCK", "EGLL"],
+        "route": [
+          "TOMMO",
+          "OCK",
+          "EGLL"
+        ],
         "initial_altitude": "FL100",
         "final_altitude": 2000
       },
       "TOMMO1B": {
         "name": "TOMMO ARRIVAL",
         "runway": "27R",
-        "route": ["TOMMO", "OCK", "EGLL"],
+        "route": [
+          "TOMMO",
+          "OCK",
+          "EGLL"
+        ],
         "initial_altitude": "FL100",
         "final_altitude": 2000
       }
