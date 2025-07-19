@@ -1046,12 +1046,6 @@ class RadarDisplay:
                 print(f"Info panels: {'ON' if self.show_info_panels else 'OFF'}")
             elif event.key == pygame.K_p:
                 self.cycle_procedures()
-            elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
-                self.scale_factor *= 1.2
-                print(f"Zoom in: {self.scale_factor:.0f}")
-            elif event.key == pygame.K_MINUS:
-                self.scale_factor /= 1.2
-                print(f"Zoom out: {self.scale_factor:.0f}")
             elif event.key == pygame.K_UP:
                 # Increase spawn rate
                 current_rate = self.aircraft_spawner.get_spawn_rate()
