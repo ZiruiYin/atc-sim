@@ -8,14 +8,12 @@ class VORStation:
         self.identifier = identifier
         self.name = data['name']
         self.frequency = data['frequency']
-        self.latitude = data['coordinates']['latitude']
-        self.longitude = data['coordinates']['longitude']
-        self.distance_from_airport = data['distance_from_airport']
-        self.bearing_from_airport = data['bearing_from_airport']
+        self.x = data['coordinates']['x']
+        self.y = data['coordinates']['y']
     
     def get_coordinates(self) -> Tuple[float, float]:
-        """Get VOR station coordinates"""
-        return (self.latitude, self.longitude)
+        """Get VOR station coordinates in screen pixels"""
+        return (self.x, self.y)
 
 
 class NDBStation:
@@ -23,28 +21,25 @@ class NDBStation:
         self.identifier = identifier
         self.name = data['name']
         self.frequency = data['frequency']
-        self.latitude = data['coordinates']['latitude']
-        self.longitude = data['coordinates']['longitude']
-        self.distance_from_airport = data['distance_from_airport']
-        self.bearing_from_airport = data['bearing_from_airport']
+        self.x = data['coordinates']['x']
+        self.y = data['coordinates']['y']
     
     def get_coordinates(self) -> Tuple[float, float]:
-        """Get NDB station coordinates"""
-        return (self.latitude, self.longitude)
+        """Get NDB station coordinates in screen pixels"""
+        return (self.x, self.y)
 
 
-class RNAVWaypoint:
+class Waypoint:
     def __init__(self, identifier: str, data: Dict):
         self.identifier = identifier
         self.name = data['name']
-        self.latitude = data['coordinates']['latitude']
-        self.longitude = data['coordinates']['longitude']
+        self.x = data['coordinates']['x']
+        self.y = data['coordinates']['y']
         self.waypoint_type = data['type']  # SID, STAR, INTERMEDIATE, etc.
-        self.procedures = data.get('procedures', [])
     
     def get_coordinates(self) -> Tuple[float, float]:
-        """Get waypoint coordinates"""
-        return (self.latitude, self.longitude)
+        """Get waypoint coordinates in screen pixels"""
+        return (self.x, self.y)
 
 
 class Procedure:
@@ -58,24 +53,22 @@ class Procedure:
 
 
 class Navigation:
-    def __init__(self, navigation_file: str):
-        self.airport_icao: str = ""
+    def __init__(self, game_coords_file: str):
         self.vor_stations: Dict[str, VORStation] = {}
         self.ndb_stations: Dict[str, NDBStation] = {}
-        self.rnav_waypoints: Dict[str, RNAVWaypoint] = {}
+        self.waypoints: Dict[str, Waypoint] = {}
         self.sid_procedures: Dict[str, Procedure] = {}
         self.star_procedures: Dict[str, Procedure] = {}
         
-        self.load_navigation_data(navigation_file)
+        self.load_game_data(game_coords_file)
     
-    def load_navigation_data(self, navigation_file: str):
-        """Load navigation data from JSON file"""
+    def load_game_data(self, game_coords_file: str):
+        """Load navigation data from game coordinates JSON file"""
         try:
-            with open(navigation_file, 'r') as f:
+            with open(game_coords_file, 'r') as f:
                 data = json.load(f)
             
             nav_data = data['navigation']
-            self.airport_icao = nav_data['airport']
             
             # Load VOR stations
             for vor_id, vor_data in nav_data.get('vor_stations', {}).items():
@@ -85,22 +78,22 @@ class Navigation:
             for ndb_id, ndb_data in nav_data.get('ndb_stations', {}).items():
                 self.ndb_stations[ndb_id] = NDBStation(ndb_id, ndb_data)
             
-            # Load RNAV waypoints
-            for waypoint_id, waypoint_data in nav_data.get('rnav_waypoints', {}).items():
-                self.rnav_waypoints[waypoint_id] = RNAVWaypoint(waypoint_id, waypoint_data)
+            # Load waypoints
+            for waypoint_id, waypoint_data in nav_data.get('waypoints', {}).items():
+                self.waypoints[waypoint_id] = Waypoint(waypoint_id, waypoint_data)
             
             # Load SID procedures
-            for sid_id, sid_data in nav_data.get('sid_procedures', {}).items():
+            for sid_id, sid_data in nav_data.get('procedures', {}).get('sid', {}).items():
                 self.sid_procedures[sid_id] = Procedure(sid_id, sid_data)
             
             # Load STAR procedures
-            for star_id, star_data in nav_data.get('star_procedures', {}).items():
+            for star_id, star_data in nav_data.get('procedures', {}).get('star', {}).items():
                 self.star_procedures[star_id] = Procedure(star_id, star_data)
             
-            print(f"Loaded navigation data for: {self.airport_icao}")
+            print(f"Loaded navigation data:")
             print(f"  - VOR stations: {len(self.vor_stations)}")
             print(f"  - NDB stations: {len(self.ndb_stations)}")
-            print(f"  - RNAV waypoints: {len(self.rnav_waypoints)}")
+            print(f"  - Waypoints: {len(self.waypoints)}")
             print(f"  - SID procedures: {len(self.sid_procedures)}")
             print(f"  - STAR procedures: {len(self.star_procedures)}")
             
@@ -116,9 +109,9 @@ class Navigation:
         """Get NDB station by identifier"""
         return self.ndb_stations.get(identifier)
     
-    def get_rnav_waypoint(self, identifier: str) -> Optional[RNAVWaypoint]:
-        """Get RNAV waypoint by identifier"""
-        return self.rnav_waypoints.get(identifier)
+    def get_waypoint(self, identifier: str) -> Optional[Waypoint]:
+        """Get waypoint by identifier"""
+        return self.waypoints.get(identifier)
     
     def get_all_vor_stations(self) -> Dict[str, VORStation]:
         """Get all VOR stations"""
@@ -128,9 +121,9 @@ class Navigation:
         """Get all NDB stations"""
         return self.ndb_stations
     
-    def get_all_rnav_waypoints(self) -> Dict[str, RNAVWaypoint]:
-        """Get all RNAV waypoints"""
-        return self.rnav_waypoints
+    def get_all_waypoints(self) -> Dict[str, Waypoint]:
+        """Get all waypoints"""
+        return self.waypoints
     
     def get_sid_procedure(self, identifier: str) -> Optional[Procedure]:
         """Get SID procedure by identifier"""
@@ -146,12 +139,4 @@ class Navigation:
     
     def get_all_star_procedures(self) -> Dict[str, Procedure]:
         """Get all STAR procedures"""
-        return self.star_procedures
-    
-    def get_rnav_waypoint(self, identifier: str) -> Optional[RNAVWaypoint]:
-        """Get RNAV waypoint by identifier"""
-        return self.rnav_waypoints.get(identifier)
-    
-    def get_vor_station(self, identifier: str) -> Optional[VORStation]:
-        """Get VOR station by identifier"""
-        return self.vor_stations.get(identifier) 
+        return self.star_procedures 
