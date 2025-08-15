@@ -27,33 +27,30 @@ def main():
     pygame.init()
     
     try:
-        # Load airport data
-        print("Loading airport data...")
-        airport_file = "data/airports/egll.json"
-        if not os.path.exists(airport_file):
-            print(f"Error: Airport data file not found: {airport_file}")
-            return
-        
-        airport = Airport(airport_file)
-        
-        # Load navigation data
-        print("Loading navigation data...")
-        navigation_file = "data/navigation/egll_navigation.json"
-        if not os.path.exists(navigation_file):
-            print(f"Error: Navigation data file not found: {navigation_file}")
-            return
-        
-        navigation = Navigation(navigation_file)
-        
-        # Create radar display
-        print("Initializing radar display...")
         info = pygame.display.Info()
         screen_width = info.current_w
         screen_height = info.current_h
+        # Generate game coordinates
+        print("Generating game coordinates...")
+        from utils.math_utils import generate_game_coordinates
+        game_coords_file = generate_game_coordinates(screen_width, screen_height, nm_per_pixel=0.04)
+        
+        # Load airport and navigation data from game coordinates
+        print("Loading game data...")
+        if not os.path.exists(game_coords_file):
+            print(f"Error: Game coordinates file not found: {game_coords_file}")
+            return
+        
+        airport = Airport(game_coords_file)
+        navigation = Navigation(game_coords_file)
+        
+        # Create radar display
+        print("Initializing radar display...")
+        
         radar = RadarDisplay(screen_width, screen_height)
         radar.set_airport(airport)
         radar.set_navigation(navigation)
-        radar.set_spawn_rate(2.0)  # 2 aircraft per minute
+        # radar.set_spawn_rate(2.0)  # 2 aircraft per minute - commented out for now
         
         print("\nControls:")
         print("  V - Toggle VOR stations")
@@ -110,8 +107,8 @@ def main():
                     if radar.handle_event(event):
                         running = False
             
-            # Update aircraft
-            radar.update_aircraft(dt)
+            # Update aircraft (commented out for now)
+            # radar.update_aircraft(dt)
             
             # Render display
             radar.render()

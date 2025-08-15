@@ -7,18 +7,18 @@ from core.navigation import Navigation
 from core.aircraft import Aircraft
 from core.aircraft_spawner import AircraftSpawner
 from core.collision import CollisionDetector
-from utils.math_utils import lat_lon_to_pixels, distance_between_points
+from utils.math_utils import nm_to_screen_coords, distance_between_points
 
 
 class RadarDisplay:
     def __init__(self, screen_width: int = None, screen_height: int = None):
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.scale_factor = 800  # Pixels per degree (zoom level)
+        self.nm_per_pixel = 1.0  # Scale factor: how many nautical miles per pixel
         self.airport: Optional[Airport] = None
         self.navigation: Optional[Navigation] = None
-        self.aircraft: List[Aircraft] = []
-        self.aircraft_spawner = AircraftSpawner(screen_width, screen_height)
+        # self.aircraft: List[Aircraft] = []  # Commented out for now
+        # self.aircraft_spawner = AircraftSpawner(screen_width, screen_height)  # Commented out for now
         
         # Colors
         self.COLOR_BACKGROUND = (0, 20, 0)  # Dark green
@@ -61,10 +61,10 @@ class RadarDisplay:
         self.is_locked = False
         
         # Aircraft selection
-        self.selected_aircraft = None
+        # self.selected_aircraft = None  # Commented out for now
         
         # Collision detection
-        self.collision_detector = CollisionDetector()
+        # self.collision_detector = CollisionDetector()  # Commented out for now
         
         # Initialize pygame
         pygame.init()
@@ -87,10 +87,10 @@ class RadarDisplay:
         self.navigation = navigation
         print(f"Navigation data loaded for radar display")
     
-    def set_spawn_rate(self, aircraft_per_minute: float):
-        """Set the aircraft spawn rate"""
-        self.aircraft_spawner.set_spawn_rate(aircraft_per_minute)
-        print(f"Aircraft spawn rate set to {aircraft_per_minute} aircraft per minute")
+    # def set_spawn_rate(self, aircraft_per_minute: float):
+    #     """Set the aircraft spawn rate"""
+    #     self.aircraft_spawner.set_spawn_rate(aircraft_per_minute)
+    #     print(f"Aircraft spawn rate set to {aircraft_per_minute} aircraft per minute")
     
     def find_aircraft_at_position(self, mouse_x: int, mouse_y: int) -> Optional[Aircraft]:
         """Find aircraft at the given mouse position"""
@@ -103,46 +103,46 @@ class RadarDisplay:
         return None
     
     def draw_grid(self):
-        """Draw coordinate grid"""
+        """Draw coordinate grid in NM"""
         if not self.show_grid or not self.airport:
             return
         
-        center_lat, center_lon = self.airport.get_coordinates()
+        # Draw grid lines every 5 NM
+        grid_spacing_nm = 5.0
         
-        # Draw grid lines every 0.05 degrees (roughly 3 nm)
-        grid_spacing = 0.05
+        # Calculate how many grid lines we need to cover the screen
+        max_nm_x = self.screen_width / 2 * self.nm_per_pixel
+        max_nm_y = self.screen_height / 2 * self.nm_per_pixel
+        max_lines = int(max(max_nm_x, max_nm_y) / grid_spacing_nm) + 1
         
-        # Vertical lines
-        for i in range(-10, 11):
-            lon = center_lon + i * grid_spacing
-            x, _ = lat_lon_to_pixels(center_lat, lon, center_lat, center_lon, 
-                                   self.screen_width, self.screen_height, self.scale_factor)
+        # Vertical lines (constant nm_x)
+        for i in range(-max_lines, max_lines + 1):
+            nm_x = i * grid_spacing_nm
+            x, _ = nm_to_screen_coords(nm_x, 0, self.screen_width, self.screen_height, self.nm_per_pixel)
             if 0 <= x <= self.screen_width:
                 pygame.draw.line(self.screen, self.COLOR_GRID, (x, 0), (x, self.screen_height))
         
-        # Horizontal lines
-        for i in range(-10, 11):
-            lat = center_lat + i * grid_spacing
-            _, y = lat_lon_to_pixels(lat, center_lon, center_lat, center_lon, 
-                                   self.screen_width, self.screen_height, self.scale_factor)
+        # Horizontal lines (constant nm_y)
+        for i in range(-max_lines, max_lines + 1):
+            nm_y = i * grid_spacing_nm
+            _, y = nm_to_screen_coords(0, nm_y, self.screen_width, self.screen_height, self.nm_per_pixel)
             if 0 <= y <= self.screen_height:
                 pygame.draw.line(self.screen, self.COLOR_GRID, (0, y), (self.screen_width, y))
     
     def draw_range_rings(self):
-        """Draw range rings around airport"""
+        """Draw range rings around airport (centered at 0,0 NM)"""
         if not self.show_range_rings or not self.airport:
             return
         
-        center_lat, center_lon = self.airport.get_coordinates()
-        center_x, center_y = lat_lon_to_pixels(center_lat, center_lon, center_lat, center_lon,
-                                             self.screen_width, self.screen_height, self.scale_factor)
+        # Airport center is at (0,0) in NM coordinates
+        center_x, center_y = nm_to_screen_coords(0, 0, self.screen_width, self.screen_height, self.nm_per_pixel)
         
         # Draw rings at 5, 10, 15, 20 NM
         ring_distances = [5, 10, 15, 20]  # nautical miles
         
         for distance in ring_distances:
-            # Calculate radius in pixels (approximate)
-            radius_pixels = int(distance * self.scale_factor / 60)  # 60 nm per degree approx
+            # Calculate radius in pixels
+            radius_pixels = int(distance / self.nm_per_pixel)
             
             if radius_pixels > 0 and radius_pixels < max(self.screen_width, self.screen_height):
                 pygame.draw.circle(self.screen, self.COLOR_GRID, (center_x, center_y), radius_pixels, 1)
@@ -156,9 +156,9 @@ class RadarDisplay:
         if not self.airport:
             return
         
-        center_lat, center_lon = self.airport.get_coordinates()
-        x, y = lat_lon_to_pixels(center_lat, center_lon, center_lat, center_lon,
-                               self.screen_width, self.screen_height, self.scale_factor)
+        # Airport coordinates are already in screen pixels
+        airport_coords = self.airport.get_coordinates()
+        x, y = airport_coords[0], airport_coords[1]
         
         # Draw airport symbol (circle)
         pygame.draw.circle(self.screen, self.COLOR_AIRPORT, (x, y), 8, 2)
@@ -177,17 +177,12 @@ class RadarDisplay:
         if not runway:
             return
         
-        center_lat, center_lon = self.airport.get_coordinates()
-        
-        # Get runway coordinates
+        # Get runway coordinates (already in screen pixels)
         threshold_coords = runway.get_threshold_coords()
         end_coords = runway.get_end_coords()
         
-        # Convert to screen coordinates
-        x1, y1 = lat_lon_to_pixels(threshold_coords[0], threshold_coords[1], 
-                                 center_lat, center_lon, self.screen_width, self.screen_height, self.scale_factor)
-        x2, y2 = lat_lon_to_pixels(end_coords[0], end_coords[1], 
-                                 center_lat, center_lon, self.screen_width, self.screen_height, self.scale_factor)
+        x1, y1 = threshold_coords[0], threshold_coords[1]
+        x2, y2 = end_coords[0], end_coords[1]
         
         # Draw runway (thinner)
         pygame.draw.line(self.screen, self.COLOR_RUNWAY, (x1, y1), (x2, y2), 3)
@@ -247,15 +242,12 @@ class RadarDisplay:
     
     def draw_vor_stations(self):
         """Draw VOR stations"""
-        if not self.show_vor or not self.navigation or not self.airport:
+        if not self.show_vor or not self.navigation:
             return
-        
-        center_lat, center_lon = self.airport.get_coordinates()
         
         for vor_id, vor_station in self.navigation.get_all_vor_stations().items():
             vor_coords = vor_station.get_coordinates()
-            x, y = lat_lon_to_pixels(vor_coords[0], vor_coords[1], center_lat, center_lon,
-                                   self.screen_width, self.screen_height, self.scale_factor)
+            x, y = vor_coords[0], vor_coords[1]
             
             # Only draw if on screen
             if 0 <= x <= self.screen_width and 0 <= y <= self.screen_height:
@@ -279,15 +271,12 @@ class RadarDisplay:
     
     def draw_ndb_stations(self):
         """Draw NDB stations"""
-        if not self.show_ndb or not self.navigation or not self.airport:
+        if not self.show_ndb or not self.navigation:
             return
-        
-        center_lat, center_lon = self.airport.get_coordinates()
         
         for ndb_id, ndb_station in self.navigation.get_all_ndb_stations().items():
             ndb_coords = ndb_station.get_coordinates()
-            x, y = lat_lon_to_pixels(ndb_coords[0], ndb_coords[1], center_lat, center_lon,
-                                   self.screen_width, self.screen_height, self.scale_factor)
+            x, y = ndb_coords[0], ndb_coords[1]
             
             # Only draw if on screen
             if 0 <= x <= self.screen_width and 0 <= y <= self.screen_height:
@@ -306,16 +295,13 @@ class RadarDisplay:
                 self.screen.blit(freq_text, (x - freq_width - 10, y + 5))
     
     def draw_waypoints(self):
-        """Draw RNAV waypoints"""
-        if not self.show_waypoints or not self.navigation or not self.airport:
+        """Draw waypoints"""
+        if not self.show_waypoints or not self.navigation:
             return
         
-        center_lat, center_lon = self.airport.get_coordinates()
-        
-        for waypoint_id, waypoint in self.navigation.get_all_rnav_waypoints().items():
+        for waypoint_id, waypoint in self.navigation.get_all_waypoints().items():
             waypoint_coords = waypoint.get_coordinates()
-            x, y = lat_lon_to_pixels(waypoint_coords[0], waypoint_coords[1], center_lat, center_lon,
-                                   self.screen_width, self.screen_height, self.scale_factor)
+            x, y = waypoint_coords[0], waypoint_coords[1]
             
             # Only draw if on screen
             if 0 <= x <= self.screen_width and 0 <= y <= self.screen_height:
@@ -400,10 +386,8 @@ class RadarDisplay:
     
     def draw_procedures(self):
         """Draw currently selected SID or STAR procedure"""
-        if self.current_procedure_index == -1 or not self.navigation or not self.airport:
+        if self.current_procedure_index == -1 or not self.navigation:
             return
-        
-        center_lat, center_lon = self.airport.get_coordinates()
         
         # Get all procedures in order
         all_procedures = []
@@ -419,9 +403,9 @@ class RadarDisplay:
         # Draw the currently selected procedure
         if 0 <= self.current_procedure_index < len(all_procedures):
             procedure, color, proc_type = all_procedures[self.current_procedure_index]
-            self.draw_procedure_route(procedure, center_lat, center_lon, color)
+            self.draw_procedure_route(procedure, color)
     
-    def draw_procedure_route(self, procedure, center_lat: float, center_lon: float, color: tuple):
+    def draw_procedure_route(self, procedure, color: tuple):
         """Draw a single procedure route"""
         route_points = []
         
@@ -429,24 +413,21 @@ class RadarDisplay:
             # Check if waypoint is EGLL (airport)
             if waypoint_name == "EGLL":
                 airport_coords = self.airport.get_coordinates()
-                x, y = lat_lon_to_pixels(airport_coords[0], airport_coords[1], center_lat, center_lon,
-                                       self.screen_width, self.screen_height, self.scale_factor)
+                x, y = airport_coords[0], airport_coords[1]
                 route_points.append((x, y))
             else:
-                # Check in RNAV waypoints
-                waypoint = self.navigation.get_rnav_waypoint(waypoint_name)
+                # Check in waypoints
+                waypoint = self.navigation.get_waypoint(waypoint_name)
                 if waypoint:
                     waypoint_coords = waypoint.get_coordinates()
-                    x, y = lat_lon_to_pixels(waypoint_coords[0], waypoint_coords[1], center_lat, center_lon,
-                                           self.screen_width, self.screen_height, self.scale_factor)
+                    x, y = waypoint_coords[0], waypoint_coords[1]
                     route_points.append((x, y))
                 else:
                     # Check in VOR stations
                     vor_station = self.navigation.get_vor_station(waypoint_name)
                     if vor_station:
                         vor_coords = vor_station.get_coordinates()
-                        x, y = lat_lon_to_pixels(vor_coords[0], vor_coords[1], center_lat, center_lon,
-                                               self.screen_width, self.screen_height, self.scale_factor)
+                        x, y = vor_coords[0], vor_coords[1]
                         route_points.append((x, y))
         
         # Draw the route as connected lines
@@ -480,9 +461,9 @@ class RadarDisplay:
         y_offset = 20
         info_lines = [
             f"Airport: {self.airport.name}",
-            f"ICAO: {self.airport.icao} / IATA: {self.airport.iata}",
-            f"Coordinates: {self.airport.latitude:.4f}, {self.airport.longitude:.4f}",
-            f"Elevation: {self.airport.elevation} ft",
+            f"ICAO: {self.airport.icao}",
+            f"Screen: {self.screen_width}x{self.screen_height}",
+            f"Scale: {self.nm_per_pixel} nm/pixel",
             f"Runways: {len(self.airport.runways)}"
         ]
         
@@ -789,29 +770,29 @@ class RadarDisplay:
     def draw_command_input(self):
         """Draw command input textbox at the bottom"""
         # Check if game is frozen due to crash
-        if self.collision_detector.is_game_frozen():
-            # Draw crash message instead of command input
-            crash_message = self.collision_detector.get_crash_message()
-            text_surface = self.font_large.render(crash_message, True, self.COLOR_WARNING)
-            text_rect = text_surface.get_rect()
-            text_rect.centerx = self.screen_width // 2
-            text_rect.y = self.screen_height - 100
+        # if self.collision_detector.is_game_frozen():
+        #     # Draw crash message instead of command input
+        #     crash_message = self.collision_detector.get_crash_message()
+        #     text_surface = self.font_large.render(crash_message, True, self.COLOR_WARNING)
+        #     text_rect = text_surface.get_rect()
+        #     text_rect.centerx = self.screen_width // 2
+        #     text_rect.y = self.screen_height - 100
             
-            # Draw background for crash message
-            bg_rect = pygame.Rect(text_rect.x - 20, text_rect.y - 10, text_rect.width + 40, text_rect.height + 20)
-            pygame.draw.rect(self.screen, (0, 0, 0), bg_rect)
-            pygame.draw.rect(self.screen, self.COLOR_WARNING, bg_rect, 3)
+        #     # Draw background for crash message
+        #     bg_rect = pygame.Rect(text_rect.x - 20, text_rect.y - 10, text_rect.width + 40, text_rect.height + 20)
+        #     pygame.draw.rect(self.screen, (0, 0, 0), bg_rect)
+        #     pygame.draw.rect(self.screen, self.COLOR_WARNING, bg_rect, 3)
             
-            self.screen.blit(text_surface, text_rect)
+        #     self.screen.blit(text_surface, text_rect)
             
-            # Draw restart instruction
-            restart_text = "Press ESC to exit"
-            restart_surface = self.font_medium.render(restart_text, True, self.COLOR_TEXT)
-            restart_rect = restart_surface.get_rect()
-            restart_rect.centerx = self.screen_width // 2
-            restart_rect.y = self.screen_height - 60
-            self.screen.blit(restart_surface, restart_rect)
-            return
+        #     # Draw restart instruction
+        #     restart_text = "Press ESC to exit"
+        #     restart_surface = self.font_medium.render(restart_text, True, self.COLOR_TEXT)
+        #     restart_rect = restart_surface.get_rect()
+        #     restart_rect.centerx = self.screen_width // 2
+        #     restart_rect.y = self.screen_height - 60
+        #     self.screen.blit(restart_surface, restart_rect)
+        #     return
         
         # Command input box
         box_height = 30
@@ -933,9 +914,8 @@ class RadarDisplay:
         # Clear screen
         self.screen.fill(self.COLOR_BACKGROUND)
         
-        # Draw grid and range rings
+        # Draw grid (no range rings as requested)
         self.draw_grid()
-        self.draw_range_rings()
         
         # Draw airport elements
         self.draw_runways()
@@ -945,31 +925,31 @@ class RadarDisplay:
         self.draw_vor_stations()
         self.draw_ndb_stations()
         self.draw_waypoints()
-        self.draw_ils_approaches()
+        # self.draw_ils_approaches()  # Removed as requested
         self.draw_procedures()
         
-        # Draw aircraft
-        self.draw_aircraft()
-        self.draw_spawn_info()
+        # Draw aircraft (commented out for now)
+        # self.draw_aircraft()
+        # self.draw_spawn_info()
         
         # Draw UI elements
         if self.show_info_panels:
             self.draw_info_panel()
         if self.show_legend:
             self.draw_legend()
-        self.draw_command_input()
+        # self.draw_command_input()
         
         # Update display
         pygame.display.flip()
     
     def handle_event(self, event):
         """Handle pygame events"""
-        # Check if game is frozen due to crash
-        if self.collision_detector.is_game_frozen():
-            # Only allow ESC key when game is frozen
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                return True  # Signal to exit
-            return False  # Ignore all other events
+        # # Check if game is frozen due to crash (commented out for now)
+        # if self.collision_detector.is_game_frozen():
+        #     # Only allow ESC key when game is frozen
+        #     if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+        #         return True  # Signal to exit
+        #     return False  # Ignore all other events
         
         if event.type == pygame.MOUSEBUTTONDOWN:
             # Handle mouse clicks for aircraft selection
