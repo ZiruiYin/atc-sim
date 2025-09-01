@@ -16,6 +16,30 @@ The implementation is in progress. TODOs (mostly in this order):
 ## How to run
 `python main.py`
 
+## Display Toggles
+
+You can toggle various radar display elements and settings using keyboard shortcuts while the textbox is **unlocked**:
+
+| Key         | Effect                                 |
+|-------------|----------------------------------------|
+| `A`         | Toggle airport label display           |
+| `R`         | Toggle radar rings                     |
+| `V`         | Toggle VOR stations                    |
+| `N`         | Toggle NDB stations                    |
+| `W`         | Toggle waypoints                       |
+| `U`         | Toggle runway names                    |
+| `D`         | Toggle detailed aircraft tags          |
+| `+` / `=`   | Increase aircraft spawn rate           |
+| `-`         | Decrease aircraft spawn rate           |
+| `↑`         | Toggle spawning from North             |
+| `↓`         | Toggle spawning from South             |
+| `←`         | Toggle spawning from West              |
+| `→`         | Toggle spawning from East              |
+| `L`         | Lock the textbox for command entry     |
+
+- When the textbox is **locked**, you can type commands for aircraft.
+- To unlock the textbox, type `unlock` and press `Enter`.
+
 ## Aircraft Command Reference
 
 Control aircraft using the following commands. Enter the aircraft's callsign first (by typing or clicking the aircraft), followed by a space and the command(s).  
