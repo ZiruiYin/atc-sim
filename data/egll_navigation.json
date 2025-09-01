@@ -1,0 +1,78 @@
+{
+  "navigation": {
+    "vor_stations": {
+      "LON": {
+        "name": "LONDON",
+        "coordinates": {
+          "latitude": 51.487202,
+          "longitude": -0.466667
+        }
+      },
+      "OCK": {
+        "name": "OCKHAM",
+        "coordinates": {
+          "latitude": 51.305000,
+          "longitude": -0.447222
+        }
+      },
+      "BNN": {
+        "name": "BOVINGDON",
+        "coordinates": {
+          "latitude": 51.726101,
+          "longitude": -0.549722
+        }
+      },
+      "BIG": {
+        "name": "BIGGIN",
+        "coordinates": {
+          "latitude": 51.330898,
+          "longitude": 0.034811
+        }
+      },
+      "LAM": {
+        "name": "LAMBOURNE",
+        "coordinates": {
+          "latitude": 51.646099,
+          "longitude": 0.151667
+        }
+      },
+      "CPT": {
+        "name": "COMPTON",
+        "coordinates": {
+          "latitude": 51.491699,
+          "longitude": -1.219720
+        }
+      },
+      "BUR": {
+        "name": "BURNHAM",
+        "coordinates": {
+          "latitude": 51.518902,
+          "longitude": -0.677222
+        }
+      },
+      "CHT": {
+        "name": "CHILTERN",
+        "coordinates": {
+          "latitude": 51.623100,
+          "longitude": -0.518333
+        }
+      },
+      "EPM": {
+        "name": "EPSOM",
+        "coordinates": {
+          "latitude": 51.319401,
+          "longitude": -0.371944
+        }
+      },
+      "WOD": {
+        "name": "WOODLEY",
+        "coordinates": {
+          "latitude": 51.452801,
+          "longitude": -0.878889
+        }
+      }
+    },
+    "ndb_stations": {},
+    "rnav_waypoints": {}
+  }
+}

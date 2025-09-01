@@ -1,49 +1,54 @@
-This is an ATC simulator game for London Heathrow airport (EGLL/LHR), inspired by atc-sim.com.
+This is an ATC simulator game (currently only for EGLL/LHR), inspired by atc-sim.com.
 
-The implementation is in progress. TODOs:
-- [ ] More realistic constraints (speed, altitude, ILS interception angle restrictions, etc.)
+The implementation is in progress. TODOs (mostly in this order):
+- [ ] Text-to-speech models deployed for sound
+- [ ] Speech-to-text + LM models deployed for verbal commands
+- [ ] More realistic constraints (speed, altitude, ILS interception restrictions, etc.)
+- [ ] Game crash protections for invalid commands
+- [ ] Fix bugs with certain ILS angles
 - [ ] Scoring system
 - [ ] Departure aircraft functionality (all aircrafts right now are arrival traffic)
-- [ ] Aircraft types (they all have the same performance for now)
-- [ ] Code refactoring (LOTS of hard-coded stuff! Also, the architecture is a mess...)
-- [ ] A side page to show the current aircrafts
-- [ ] Scaling issues (so done with having lon,lat vs. nm vs. pixels... need to find a uniform scale)
+- [ ] Aircraft types
 
 ## Requirements
-- Python with pygame (`pip install pygame`)
+- Python with pygame `pip install pygame`
 
 ## How to run
-1. Clone the repo
-2. Install dependencies
-3. `cd src`
-4. `python main.py`
+`python main.py`
 
-## Commands
-Control aircraft using the following commands: Note that you should use the aircraft callsign first (type or click the aircraft) following with a space and the commands.
+## Aircraft Command Reference
+
+Control aircraft using the following commands. Enter the aircraft's callsign first (by typing or clicking the aircraft), followed by a space and the command(s).  
+Multiple commands can be chained (e.g., `C 090;L S 220;X`).
 
 ### Course Commands (C)
-- `C xxx` - Set heading (xxx = heading in degrees)
-  - Optional: Add L/R (w/o space) for specific turn direction (e.g., `C 090L`)
-- `C x/xx` - Set altitude (x/xx = altitude in thousands of feet)
-  - Optional: Add X for expedited climb/descent (e.g., `C 5 X`)
-- `C [waypoint]` - Direct aircraft to waypoint
-  - Optional: Add L/R for specific turn direction
-
-### Landing Commands (L)
-- `L [runway]` - Clear for ILS approach to specified runway
-  - Must be within 15nm of airport
-  - Must be below 5000 feet AGL
-  - Must be below 220 knots
-Note that the aircraft will automatically slow to 140kts on 5nm short final
-
-### Hold Commands (H)
-- `H [waypoint]` - Hold at specified waypoint
-  - Optional: Add L/R for turn direction (default: right turns)
-  - Use course/hold commands to exit hold
+- `C xxx` — Set heading (xxx = heading in degrees, e.g., `C 090`)
+  - Optional: Add `;L` or `;R` (semicolon, no space) for specific turn direction (e.g., `C 090;L`)
+- `C x/xx` — Set altitude (x/xx = altitude in thousands of feet, e.g., `C 5` for 5000 ft)
+  - Optional: Add `;X` for expedited climb/descent (e.g., `C 5;X`)
+- `C [waypoint]` — Direct aircraft to waypoint (e.g., `C CPT`)
+  - Optional: Add `;L` or `;R` for turn direction
 
 ### Speed Commands (S)
-- `S xxx` - Set airspeed (xxx = speed in knots)
+- `S xxx` — Set airspeed (xxx = speed in knots, e.g., `S 220`)
+  - Optional: Add `;X` for expedited speed change (e.g., `S 220;X`)
+
+### Hold Commands (H)
+- `H [waypoint]` — Hold at specified waypoint (e.g., `H CPT`)
+  - Optional: Add `;L` or `;R` for turn direction (default: right turns)
+  - Use course/hold commands to exit hold
+
+### Landing Commands (L)
+- `L [runway]` — Clear for ILS approach to specified runway (e.g., `L 27R`)
+  - Must be within 15nm of airport, below 5000 feet, and below 240 knots
+  - ILS interception requires heading within 30° if 5–15nm from runway, or within 20° if within 5nm
+  - Aircraft will automatically slow to 140kts on short final (within 5nm)
 
 ### Abort Command (A)
-- `A` - Abort approach (only when cleared for ILS)
-  - Aircraft will climb to 5000 feet and fly runway heading
+- `A` — Abort approach (only when cleared for ILS)
+  - Aircraft will climb and accelerate, exiting ILS
+
+**Notes:**
+- Use semicolons (`;`) to specify options (e.g., turn direction or expedite).
+- Command `A` should be before all other commands.
+- Command `L` should follow all other commands.
