@@ -1,0 +1,25 @@
+{
+  "airport": {
+    "icao": "EGLL",
+    "iata": "LHR",
+    "name": "London Heathrow Airport",
+    "coordinates": {
+      "latitude": 51.4775,
+      "longitude": -0.4614
+    },
+    "runways": {
+      "09L/27R": {
+        "thresholds": {
+          "09L": { "latitude": 51.4777, "longitude": -0.4896 },
+          "27R": { "latitude": 51.4777, "longitude": -0.4333 }
+        }
+      },
+      "09R/27L": {
+        "thresholds": {
+          "09R": { "latitude": 51.4655, "longitude": -0.4870 },
+          "27L": { "latitude": 51.4655, "longitude": -0.4341 }
+        }
+      }
+    }
+  }
+}
