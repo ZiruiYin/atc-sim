@@ -5,7 +5,7 @@ The implementation is in progress. TODOs (mostly in this order):
 - [ ] Speech-to-text + LM models deployed for verbal commands
 - [ ] More realistic constraints (speed, altitude, ILS interception restrictions, etc.)
 - [ ] Game crash protections for invalid commands
-- [ ] Fix bugs with certain ILS angles
+- [✓] Fix bugs with certain ILS angles
 - [ ] Scoring system
 - [ ] Departure aircraft functionality (all aircrafts right now are arrival traffic)
 - [ ] Aircraft types
