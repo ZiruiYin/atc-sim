@@ -54,6 +54,6 @@ class AircraftSpawner:
     
     def spawn_text_example(self): #For testing purposes only
         aircraft_1 = Aircraft("TEST1", self.screen_width / 2 - 150, self.screen_height / 2 + 10, 90, 1000, 220)
-        aircraft_2 = Aircraft("TEST2", self.screen_width / 2 - 170, self.screen_height / 2 + 10, 90, 1000, 220)
+        aircraft_2 = Aircraft("TEST2", self.screen_width / 2 - 155, self.screen_height / 2 + 10, 90, 1000, 220)
 
         return [aircraft_1, aircraft_2]
