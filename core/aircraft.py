@@ -172,7 +172,6 @@ class Aircraft:
                 self.turn_direction = "L"
             else:
                 self.turn_direction = "R"
-
     
         if self.turn_direction == "L":
             new_heading = self.heading - max_turn
@@ -183,9 +182,9 @@ class Aircraft:
         
         if heading_diff(self.heading, self.target_heading) <= max_turn:
             self.heading = self.target_heading
-            self.turn_direction = None
         else:
             self.heading = new_heading
+        self.turn_direction = None
 
     def update_wpt_nav(self):
         if not self.target_wpt:
