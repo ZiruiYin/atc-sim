@@ -1,17 +1,18 @@
 This is an ATC simulator game (currently only for EGLL/LHR), inspired by atc-sim.com.
 
 The implementation is in progress. TODOs (mostly in this order):
+- [x] Fix bugs with ILS LOC
 - [ ] Text-to-speech models deployed for sound
 - [ ] Speech-to-text + LM models deployed for verbal commands
-- [ ] More realistic constraints (speed, altitude, ILS interception restrictions, etc.)
 - [ ] Game crash protections for invalid commands
-- [x] Fix bugs with certain ILS angles
+- [ ] More realistic constraints (speed, altitude, ILS interception restrictions, SID/STAR procedures, etc.)
 - [ ] Scoring system
-- [ ] Departure aircraft functionality (all aircrafts right now are arrival traffic)
+- [ ] Departure aircrafts (all aircrafts right now are arrival traffic)
 - [ ] Aircraft types
 
 ## Requirements
 - Python with pygame `pip install pygame`
+- An executable package will be offered
 
 ## How to run
 `python main.py`
