@@ -81,10 +81,10 @@ class CollisionMonitor:
         
         collision_warning = False
         
-        if vertical_separation < 1000 and not aircraft1.ils_runway and not aircraft2.ils_runway:
+        if vertical_separation < 1000 and not aircraft1.ils_runway and not aircraft2.ils_runway and not aircraft1.on_ground and not aircraft2.on_ground:
             collision_warning = True
-        
-        if aircraft1.on_ground and aircraft2.on_ground and aircraft1.ils_runway == aircraft2.ils_runway and aircraft1.ils_runway is not None:
+
+        if aircraft1.on_ground and aircraft2.on_ground and aircraft1.on_ground == aircraft2.on_ground:
             collision_warning = True
         
         if collision_warning:
@@ -93,7 +93,7 @@ class CollisionMonitor:
         
         if vertical_separation <= 40:
             pixel_distance = distance_between_coords_pixels(aircraft1.x, aircraft1.y, aircraft2.x, aircraft2.y)
-            crash_threshold_pixels = 0.05 / self.nm_per_pixel
+            crash_threshold_pixels = 0.1 / self.nm_per_pixel
             
             if pixel_distance <= crash_threshold_pixels:
                 aircraft1.crash = f"collided with {aircraft2.callsign}"
