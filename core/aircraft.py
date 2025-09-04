@@ -32,7 +32,7 @@ class Aircraft:
         self.loc_intercepted = False
         self.gs_intercepted = False
         self.short_final = False
-        self.on_ground = False
+        self.on_ground = None
         self.go_around = False
 
         self.landed = False
@@ -60,10 +60,11 @@ class Aircraft:
             "target_altitude": self.target_altitude,
             "target_airspeed": self.target_airspeed,
             "target_wpt": self.target_wpt,
-            "landed": self.landed
+            "landed": self.landed,
+            "collision_warning": self.collision_warning
         }
 
-    def update(self, delta_t):
+    def update(self, delta_t, fast_forward):
         self.update_landed()
         self.update_final()
         self.update_wpt_nav()
@@ -72,7 +73,7 @@ class Aircraft:
         self.update_airspeed(delta_t)
         self.update_altitude(delta_t)
         self.update_heading(delta_t)
-        self.update_position(delta_t)
+        self.update_position(delta_t, fast_forward)
 
     def update_landed(self):
         if self.altitude <= 20:
@@ -81,7 +82,8 @@ class Aircraft:
                 runway_number = ''.join(filter(str.isdigit, self.ils_runway))
                 runway_heading = int(runway_number) * 10
                 if distance_between_coords_pixels(self.x, self.y, threshold_x, threshold_y) < 5:
-                    self.on_ground = True
+                    if self.ils_runway:
+                        self.on_ground = self.ils_runway
                     self.target_airspeed = 0
                     self.target_altitude = 0
                     self.altitude = 0
@@ -293,7 +295,7 @@ class Aircraft:
         else:
             self.target_altitude = projected_alt
 
-    def update_position(self, delta_t):
+    def update_position(self, delta_t, fast_forward):
         nm_per_second = ias_to_gs(self.airspeed, self.altitude) / 3600
         nm_traveled = nm_per_second * delta_t
         pixels_traveled = nm_traveled / self.nm_per_pixel
@@ -306,7 +308,7 @@ class Aircraft:
         self.y += dy
 
         self._traj_counter += 1
-        if self._traj_counter >= 10:
+        if self._traj_counter >= 10/fast_forward:
             self.trajectory.append((self.x, self.y))
             if len(self.trajectory) > TRAJ_LENGTH:
                 self.trajectory = self.trajectory[-TRAJ_LENGTH:]
