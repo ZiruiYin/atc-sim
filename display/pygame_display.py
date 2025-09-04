@@ -41,16 +41,23 @@ class RadarDisplay:
         self.spawn_rate = 60
         self.spawn_directions = ["N", "S", "E", "W"]
         self.spawner = AircraftSpawner(self.screen_width, self.radar_height, self.spawn_rate, self.spawn_directions)
-
+        
         # TESTING ONLY
         # test_aircrafts = self.spawner.spawn_text_example()
         # for aircraft in test_aircrafts:
         #     self.aircraft_list[aircraft.callsign] = aircraft
         
         self.collision_monitor = CollisionMonitor(self.screen_width, self.radar_height)
-        
+
+        self.num_landed = 0
+        self.improper_exits = 0
+        self.has_violation = False
+        self.violation_seconds = 0.0
+
         self.crash_occurred = False
         self.crash_message = ""
+
+        self.fast_forward = 1
         
     def load_data(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -156,6 +163,7 @@ class RadarDisplay:
     def draw_aircraft(self, delta_t):
         aircraft_list = list(self.aircraft_list.values())
         self.collision_monitor.check_collisions(aircraft_list)
+        self.has_violation = False
         
         for aircraft in aircraft_list:
             if aircraft.crash is not None:
@@ -166,14 +174,23 @@ class RadarDisplay:
         to_remove = []
         for aircraft in self.aircraft_list.values():
             if not self.crash_occurred:
-                aircraft.update(delta_t=delta_t)
+                aircraft.update(delta_t, self.fast_forward)
             
-            info = aircraft.get_info() if hasattr(aircraft, 'get_info') else None
-            if info and info.get('landed', False):
-                to_remove.append(aircraft.callsign)
+            info = aircraft.get_info()
+
+            x, y = info['position'][0], info['position'][1]
+
+            if x < 0 or x > self.screen_width or y < 0 or y > self.screen_height:
+                to_remove.append(info['callsign'])
+                self.improper_exits += 1
                 continue
 
-            traj = aircraft.trajectory
+            if info['landed']:
+                to_remove.append(info['callsign'])
+                self.num_landed += 1
+                continue
+
+            traj = info['trajectory']
             n = len(traj)
             for i, (x, y) in enumerate(traj):
                 alpha = int(255 * (i + 1) / n) if n > 1 else 255
@@ -181,11 +198,9 @@ class RadarDisplay:
                 surf = pygame.Surface((6, 6), pygame.SRCALPHA)
                 pygame.draw.circle(surf, color, (3, 3), 3)
                 self.screen.blit(surf, (int(x) - 3, int(y) - 3))
-
-            x, y = aircraft.x, aircraft.y
             
             aircraft_color = (255, 255, 255)
-            if hasattr(aircraft, 'collision_warning') and aircraft.collision_warning:
+            if aircraft.collision_warning:
                 aircraft_color = (255, 0, 0)
             
             pygame.draw.circle(self.screen, aircraft_color, (int(x), int(y)), 5)
@@ -222,8 +237,9 @@ class RadarDisplay:
                     tag = f"{cs} {ias_str} {alt_str} {hdg_str}"
             
             text_color = (255, 255, 255)
-            if hasattr(aircraft, 'collision_warning') and aircraft.collision_warning:
+            if info['collision_warning']:
                 text_color = (255, 0, 0)
+                self.has_violation = True
             
             if self.aircraft_details:
                 text = self.font.render(tag, True, text_color)
@@ -251,7 +267,7 @@ class RadarDisplay:
         status_surface = self.font.render(status, True, color)
         self.screen.blit(status_surface, (rect.x, rect.y - 22))
 
-    def draw_spawning_display(self):
+    def draw_misc_display(self):
         spawn_text = f"Spawn rate: {self.spawn_rate}s/aircraft"
         text_surface = self.font.render(spawn_text, True, (200, 200, 200))
         text_rect = text_surface.get_rect()
@@ -264,11 +280,24 @@ class RadarDisplay:
             if direction in self.spawn_directions:
                 directions_display.append(direction)
         
-        directions_text = f"Spawn dirs: {' '.join(directions_display)}"
+        directions_text = f"Spawn direction(s): {' '.join(directions_display)}"
         directions_surface = self.font.render(directions_text, True, (200, 200, 200))
         directions_rect = directions_surface.get_rect()
         directions_rect.topright = (self.screen_width - 10, 30)
         self.screen.blit(directions_surface, directions_rect)
+
+        scoring_text = f"Total aircrafts landed: {self.num_landed}, violation: {self.violation_seconds}s, improper exits: {self.improper_exits}"
+        scoring_surface = self.font.render(scoring_text, True, (200, 200, 200))
+        scoring_rect = scoring_surface.get_rect()
+        scoring_rect.topright = (self.screen_width - 10, 50)
+        self.screen.blit(scoring_surface, scoring_rect)
+
+        if self.fast_forward - 1:
+            fast_forward_text = f"X{self.fast_forward}"
+            fast_forward_surface = self.font.render(fast_forward_text, True, (255, 255, 0))
+            fast_forward_rect = fast_forward_surface.get_rect()
+            fast_forward_rect.topleft = (10, 10)
+            self.screen.blit(fast_forward_surface, fast_forward_rect)
 
     def draw_radar_separator(self):
         pygame.draw.line(self.screen, (100, 100, 100), 
@@ -299,6 +328,8 @@ class RadarDisplay:
             self.screen.blit(crash_text, crash_rect)
 
     def update(self, delta_t):
+        delta_t *= self.fast_forward
+
         self.screen.fill((25, 25, 25))
         
         radar_clip = pygame.Rect(0, 0, self.screen_width, self.radar_height)
@@ -317,7 +348,7 @@ class RadarDisplay:
         
         self.draw_radar_separator()
         self.draw_textbox()
-        self.draw_spawning_display()
+        self.draw_misc_display()
 
         if not self.crash_occurred:
             aircraft = self.spawner.update(delta_t)
@@ -330,9 +361,17 @@ class RadarDisplay:
                         if new_aircraft.callsign not in self.aircraft_list:
                             self.aircraft_list[new_aircraft.callsign] = new_aircraft
                             break
+        
+        if self.has_violation:
+            self.violation_seconds += delta_t
     
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_TAB:
+                if self.fast_forward == 1:
+                    self.fast_forward = 10
+                    return
+                self.fast_forward = 1
             if not self.textbox_locked:
                 if event.key == pygame.K_l:
                     self.textbox_locked = True

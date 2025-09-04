@@ -44,7 +44,7 @@ class AircraftSpawner:
             initial_y = random.uniform(self.screen_height * 0.25, self.screen_height * 0.75)
             heading = 90 + random.uniform(-15, 15)
 
-        altitude = random.uniform(4, 8) * 1000
+        altitude = random.randint(5, 10) * 1000
         airspeed = 250
 
         new_aircraft = Aircraft(callsign, initial_x, initial_y, heading, altitude, airspeed)
@@ -53,7 +53,8 @@ class AircraftSpawner:
         return new_aircraft
     
     def spawn_text_example(self): #For testing purposes only
-        aircraft_1 = Aircraft("TEST1", self.screen_width / 2 - 150, self.screen_height / 2 + 10, 90, 1000, 220)
-        aircraft_2 = Aircraft("TEST2", self.screen_width / 2 - 155, self.screen_height / 2 + 10, 90, 1000, 220)
+        aircraft_1 = Aircraft("TEST1", self.screen_width / 2 - 150, self.screen_height / 2 + 20, 90, 1000, 220)
+        aircraft_2 = Aircraft("TEST2", self.screen_width / 2 - 160, self.screen_height / 2 + 20, 90, 1000, 220)
+        aircraft_3 = Aircraft("TEST3", self.screen_width / 2 + 150, self.screen_height / 2 + 20, 270, 1000, 220)
 
-        return [aircraft_1, aircraft_2]
+        return [aircraft_1, aircraft_2, aircraft_3]
