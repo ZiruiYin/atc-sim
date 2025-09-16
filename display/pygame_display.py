@@ -43,9 +43,9 @@ class RadarDisplay:
         self.spawner = AircraftSpawner(self.screen_width, self.radar_height, self.spawn_rate, self.spawn_directions)
         
         # TESTING ONLY
-        test_aircrafts = self.spawner.spawn_text_example()
-        for aircraft in test_aircrafts:
-            self.aircraft_list[aircraft.callsign] = aircraft
+        # test_aircrafts = self.spawner.spawn_text_example()
+        # for aircraft in test_aircrafts:
+        #     self.aircraft_list[aircraft.callsign] = aircraft
         
         self.collision_monitor = CollisionMonitor(self.screen_width, self.radar_height)
 
