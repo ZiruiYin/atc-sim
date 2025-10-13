@@ -1,9 +1,10 @@
 # ATC Simulator (EGLL/LHR)
 
-UPDATE Oct 13, 2025
-The executable package is now available here: [ATC-Sim-1.0.zip](https://github.com/user-attachments/files/22893989/ATC-Sim-1.0.zip)
+## UPDATE Oct 13, 2025
 
+The executable package is now available: [ATC-Sim-1.0.zip](https://github.com/user-attachments/files/22893989/ATC-Sim-1.0.zip)
 
+---
 This is an ATC simulator game (currently only for EGLL/LHR), inspired by [atc-sim.com](http://atc-sim.com).
 
 As an approach controller, you guide inbound traffic to intercept the ILS and land safely.
