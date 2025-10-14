@@ -2,7 +2,9 @@ import sys
 import pygame
 from display.pygame_display import RadarDisplay
 
-def main():
+import asyncio
+
+async def main():
     pygame.init()
     airport_name = "egll"
     info = pygame.display.Info()
@@ -27,8 +29,10 @@ def main():
             radar.update(UPDATE_INTERVAL)
             accumulator -= UPDATE_INTERVAL
         pygame.display.flip()
+        await asyncio.sleep(0)
+
     pygame.quit()
     sys.exit()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
