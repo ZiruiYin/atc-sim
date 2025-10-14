@@ -1,17 +1,14 @@
-[build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
+[tool.pygbag]
+script = "main.py"
+title = "ATC-Sim"
+version = "1.0"
 
-[project]
-name = "atc-sim"
-version = "0.1.0"
-description = "Air Traffic Control Simulator built with Pygame"
-readme = "README.md"
-authors = [{ name = "Your Name" }]
-requires-python = ">=3.8"
-dependencies = [
-    "pygame>=2.5"
+# IMPORTANT: self-host runtime; no cross-origin CDN
+cdn = ""
+
+# ship your resources
+assets = [
+  "data/**",
+  "core/**",
+  "display/**"
 ]
-
-[project.scripts]
-atc-sim = "atc_sim.main:main"
