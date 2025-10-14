@@ -1,0 +1,20 @@
+[build]
+  command = "pip install -r requirements.txt && python -m pygbag --build ."
+  publish = "build/web"
+
+[build.environment]
+  PYTHON_VERSION = "3.11"
+
+# Required headers for WASM + cross-origin isolation
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Resource-Policy = "same-origin"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
