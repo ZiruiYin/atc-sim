@@ -3,12 +3,10 @@ script = "main.py"
 title = "ATC-Sim"
 version = "1.0"
 
-# IMPORTANT: self-host runtime; no cross-origin CDN
-cdn = ""
-
-# ship your resources
 assets = [
   "data/**",
   "core/**",
   "display/**"
 ]
+
+http_headers = { Cross-Origin-Embedder-Policy = "require-corp", Cross-Origin-Opener-Policy = "same-origin" }
