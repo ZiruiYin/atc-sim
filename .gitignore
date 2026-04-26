@@ -50,3 +50,6 @@ cython_debug/
 
 data/egll_game.json
 __pycache__/
+
+_internal/
+*.exe
