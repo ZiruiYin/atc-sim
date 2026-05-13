@@ -1,11 +1,11 @@
-from utils import *
 import math
+from environment.utils import *
 
 class CollisionMonitor:
-    def __init__(self, screen_width, screen_height):
+    def __init__(self, screen_width, screen_height, nm_per_pixel):
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.nm_per_pixel = get_nm_per_pixel()
+        self.nm_per_pixel = nm_per_pixel
 
         self.min_separation_pixel = 3 / self.nm_per_pixel
         self.grid_width = self.min_separation_pixel / math.sqrt(2)
@@ -91,9 +91,9 @@ class CollisionMonitor:
             aircraft1.collision_warning = True
             aircraft2.collision_warning = True
         
-        if vertical_separation <= 40:
+        if vertical_separation <= 50:
             pixel_distance = distance_between_coords_pixels(aircraft1.x, aircraft1.y, aircraft2.x, aircraft2.y)
-            crash_threshold_pixels = 0.1 / self.nm_per_pixel
+            crash_threshold_pixels = 0.2 / self.nm_per_pixel
             
             if pixel_distance <= crash_threshold_pixels:
                 aircraft1.crash = f"collided with {aircraft2.callsign}"
