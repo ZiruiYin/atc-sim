@@ -48,8 +48,11 @@ dmypy.json
 cython_debug/
 .vscode/
 
-data/egll_game.json
 __pycache__/
 
 _internal/
 *.exe
+
+CLAUDE.md
+doc/
+human_data/

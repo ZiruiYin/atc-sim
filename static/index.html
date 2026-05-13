@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ATC Radar</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #191919;
+    color: #ddd;
+    font-family: monospace, sans-serif;
+    overflow: hidden;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+  }
+  #main {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+  #radarArea {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+  }
+  #leftPanel {
+    width: 320px;
+    flex-shrink: 0;
+    background: #1a1a1a;
+    border-right: 2px solid #444;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #scriptSection {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+  #scriptSection h4 {
+    padding: 10px 12px 0 12px;
+    margin: 0 0 4px 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    font-weight: normal;
+  }
+  #scriptList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 12px 12px 12px;
+  }
+  .script-msg {
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-radius: 3px;
+    font: 12px monospace;
+    line-height: 1.4;
+    word-wrap: break-word;
+    border-left: 3px solid #888;
+  }
+  .script-msg.atc {
+    background: rgba(40, 90, 160, 0.22);
+    color: #cfe6ff;
+    border-left-color: #4a90e2;
+  }
+  .script-msg.pilot {
+    background: rgba(40, 130, 60, 0.18);
+    color: #d2f0d8;
+    border-left-color: #5bbf6e;
+  }
+  .script-msg.invalid {
+    background: rgba(180, 60, 60, 0.22);
+    color: #ffd2d2;
+    border-left-color: #d04848;
+  }
+  .script-msg.unable {
+    background: rgba(200, 130, 40, 0.20);
+    color: #ffe0b8;
+    border-left-color: #e0a040;
+  }
+  #scriptList:empty::before {
+    content: "(no transmissions)";
+    color: #555;
+    font-size: 12px;
+    font-style: italic;
+  }
+  #radarWrap {
+    position: relative;
+    line-height: 0;
+  }
+  canvas {
+    background: #191919;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  #ffIndicator {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    color: #ffeb3b;
+    font-size: 16px;
+    font-weight: bold;
+    pointer-events: none;
+  }
+  #pausedIndicator {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    color: #29b6f6;
+    font-size: 16px;
+    font-weight: bold;
+    pointer-events: none;
+    display: none;
+  }
+  #crashOverlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    color: #fff;
+    pointer-events: none;
+  }
+  #sidePanel {
+    width: 320px;
+    flex-shrink: 0;
+    background: #1a1a1a;
+    border-left: 2px solid #444;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .panel-section {
+    padding: 10px 12px;
+    border-bottom: 1px solid #2e2e2e;
+  }
+  .panel-section h4 {
+    margin: 0 0 6px 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    font-weight: normal;
+  }
+  .stat-row {
+    font-size: 13px;
+    color: #c8c8c8;
+    line-height: 1.5;
+  }
+  .stat-row .label { color: #888; }
+  .toggle-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .toggle-btn {
+    background: #2a2a2a;
+    color: #777;
+    border: 1px solid #444;
+    padding: 4px 8px;
+    cursor: pointer;
+    font: 12px monospace;
+    min-width: 36px;
+    text-align: center;
+  }
+  .toggle-btn:hover { background: #333; }
+  .toggle-btn.active {
+    background: #2e6f3f;
+    border-color: #4caf50;
+    color: #e8f5e8;
+  }
+  .dir-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    width: 130px;
+  }
+  .dir-grid .toggle-btn { min-width: 0; }
+  .dir-grid .empty { visibility: hidden; }
+  .rate-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .rate-row .toggle-btn { min-width: 28px; }
+  #stripsSection {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+  #stripsSection h4 {
+    padding: 10px 12px 0 12px;
+    margin: 0 0 4px 0;
+  }
+  #strips {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 12px 12px 12px;
+  }
+  .strip {
+    background: #232323;
+    border: 1px solid #3a3a3a;
+    border-left: 4px solid #888;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    font: 12px monospace;
+    color: #ddd;
+  }
+  .strip:hover { background: #2a2a2a; }
+  .strip .cs {
+    font-weight: bold;
+    font-size: 14px;
+    color: #fff;
+    margin-bottom: 2px;
+  }
+  .strip .info { color: #bbb; line-height: 1.4; }
+  .strip.warn {
+    border-left-color: #ff5252;
+    color: #ff8a80;
+  }
+  .strip.warn .cs { color: #ff5252; }
+  .strip.warn .info { color: #ff8a80; }
+  #strips:empty::before {
+    content: "(no aircraft)";
+    color: #555;
+    font-size: 12px;
+    font-style: italic;
+  }
+  #controls {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 16px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: #1f1f1f;
+    border-top: 2px solid #555;
+  }
+  #cmd {
+    flex: 1;
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 6px 8px;
+    font: 16px monospace;
+    outline: none;
+  }
+  #cmd:focus { border-color: #4caf50; }
+  button {
+    background: #333;
+    color: #ddd;
+    border: 1px solid #555;
+    padding: 6px 10px;
+    cursor: pointer;
+    font: 13px monospace;
+  }
+  button:hover { background: #444; }
+  button.active { background: #ffeb3b; color: #000; }
+  #pauseBtn.active { background: #29b6f6; color: #000; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="main">
+    <div id="leftPanel">
+      <div id="scriptSection" class="panel-section">
+        <h4>Script</h4>
+        <div id="scriptList"></div>
+      </div>
+    </div>
+    <div id="radarArea">
+      <div id="radarWrap">
+        <canvas id="radar" width="800" height="800"></canvas>
+        <div id="ffIndicator"></div>
+        <div id="pausedIndicator">PAUSED</div>
+        <div id="crashOverlay"></div>
+      </div>
+    </div>
+    <div id="sidePanel">
+      <div class="panel-section">
+        <h4>Stats</h4>
+        <div class="stat-row" id="hudScore">Landed: 0  Violation: 0s  Exits: 0</div>
+      </div>
+      <div class="panel-section">
+        <h4>Display Toggles</h4>
+        <div class="toggle-row">
+          <button class="toggle-btn" data-toggle="showAirport"   title="Airport label (A)">A</button>
+          <button class="toggle-btn" data-toggle="showRings"     title="Radar rings (R)">R</button>
+          <button class="toggle-btn" data-toggle="showVor"       title="VOR stations (V)">V</button>
+          <button class="toggle-btn" data-toggle="showNdb"       title="NDB stations (N)">N</button>
+          <button class="toggle-btn" data-toggle="showWaypoints" title="Waypoints (W)">W</button>
+          <button class="toggle-btn" data-toggle="showRunwayNames" title="Runway names (U)">U</button>
+          <button class="toggle-btn" data-toggle="aircraftDetails" title="Aircraft details (D)">D</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <h4>STAR Procedures</h4>
+        <div class="toggle-row">
+          <button class="toggle-btn" data-toggle="showStar1" title="NORTH1 (1)">1</button>
+          <button class="toggle-btn" data-toggle="showStar2" title="NORTH2 (2)">2</button>
+          <button class="toggle-btn" data-toggle="showStar3" title="NORTH3 (3)">3</button>
+          <button class="toggle-btn" data-toggle="showStar4" title="SOUTH1 (4)">4</button>
+          <button class="toggle-btn" data-toggle="showStar5" title="SOUTH2 (5)">5</button>
+          <button class="toggle-btn" data-toggle="showStar6" title="SOUTH3 (6)">6</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <h4>Spawn Directions</h4>
+        <div class="dir-grid">
+          <div class="empty"></div>
+          <button class="toggle-btn" data-dir="N" title="Toggle North spawn (Up)">N</button>
+          <div class="empty"></div>
+          <button class="toggle-btn" data-dir="W" title="Toggle West spawn (Left)">W</button>
+          <div class="empty"></div>
+          <button class="toggle-btn" data-dir="E" title="Toggle East spawn (Right)">E</button>
+          <div class="empty"></div>
+          <button class="toggle-btn" data-dir="S" title="Toggle South spawn (Down)">S</button>
+          <div class="empty"></div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <h4>Spawn Rate</h4>
+        <div class="rate-row">
+          <button class="toggle-btn" id="rateMinus" title="- (faster)">-</button>
+          <span class="stat-row" id="hudSpawnRate">--s</span>
+          <button class="toggle-btn" id="ratePlus" title="+ (slower)">+</button>
+        </div>
+      </div>
+      <div class="panel-section" id="stripsSection">
+        <h4>Aircraft</h4>
+        <div id="strips"></div>
+      </div>
+    </div>
+  </div>
+  <div id="controls">
+    <input id="cmd" type="text" placeholder="CALLSIGN COMMAND (e.g. DL123 C 270)  --  Esc to release focus, click radar/strip to select" autocomplete="off" />
+    <button id="speedBtn" title="TAB to toggle">Speed: 1x</button>
+    <button id="pauseBtn" title="P to toggle">Pause</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('radar');
+const ctx = canvas.getContext('2d');
+const cmdInput = document.getElementById('cmd');
+const speedBtn = document.getElementById('speedBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const ffIndicator = document.getElementById('ffIndicator');
+const pausedIndicator = document.getElementById('pausedIndicator');
+const hudScore = document.getElementById('hudScore');
+const hudSpawnRate = document.getElementById('hudSpawnRate');
+const crashOverlay = document.getElementById('crashOverlay');
+const stripsEl = document.getElementById('strips');
+
+let staticData = null;
+let lastState = null;
+let fastForward = 1;
+let paused = false;
+let ctrlHeld = false;
+
+const toggleState = {
+  showAirport: false,
+  showRings: true,
+  showVor: true,
+  showNdb: true,
+  showWaypoints: true,
+  showRunwayNames: true,
+  aircraftDetails: true,
+  showStar1: false,
+  showStar2: false,
+  showStar3: false,
+  showStar4: false,
+  showStar5: false,
+  showStar6: false,
+};
+
+const STAR_TOGGLES = [
+  ['showStar1', 'NORTH1'],
+  ['showStar2', 'NORTH2'],
+  ['showStar3', 'NORTH3'],
+  ['showStar4', 'SOUTH1'],
+  ['showStar5', 'SOUTH2'],
+  ['showStar6', 'SOUTH3'],
+];
+
+async function postJson(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body || {}),
+  });
+  return r.json();
+}
+
+async function getJson(url) {
+  const r = await fetch(url);
+  return r.json();
+}
+
+function isTyping() {
+  return document.activeElement === cmdInput;
+}
+
+function resizeCanvas(side) {
+  canvas.width = side;
+  canvas.height = side;
+}
+
+function fitRadar() {
+  const area = document.getElementById('radarArea');
+  const wrap = document.getElementById('radarWrap');
+  const w = area.clientWidth;
+  const h = area.clientHeight;
+  const side = Math.max(0, Math.min(w, h));
+  wrap.style.width = side + 'px';
+  wrap.style.height = side + 'px';
+}
+
+function drawRings() {
+  if (!toggleState.showRings || !staticData) return;
+  const {nm_per_pixel, airport} = staticData;
+  const cx = airport.coordinates.x;
+  const cy = airport.coordinates.y;
+  ctx.strokeStyle = '#00ff00';
+  ctx.lineWidth = 1;
+  for (const nm of [5, 10, 15, 20, 25, 30]) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, nm / nm_per_pixel, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawRunways() {
+  if (!staticData) return;
+  ctx.strokeStyle = '#ffffff';
+  ctx.fillStyle = '#cccccc';
+  ctx.lineWidth = 1;
+  ctx.font = '13px monospace';
+  for (const [pairId, pairData] of Object.entries(staticData.runways)) {
+    const thresholds = pairData.thresholds || {};
+    const keys = Object.keys(thresholds);
+    if (keys.length < 2) continue;
+    const t1 = thresholds[keys[0]];
+    const t2 = thresholds[keys[1]];
+    ctx.beginPath();
+    ctx.moveTo(t1.x, t1.y);
+    ctx.lineTo(t2.x, t2.y);
+    ctx.stroke();
+    if (toggleState.showRunwayNames) {
+      for (const [name, t] of [[keys[0], t1], [keys[1], t2]]) {
+        let ox = 40, oy = 0;
+        const head2 = name.slice(0, 2);
+        if (/^\d{2}$/.test(head2)) {
+          const heading = parseInt(head2, 10);
+          const angle = ((heading * 10 + 180) % 360) * Math.PI / 180;
+          ox = 50 * Math.sin(angle);
+          oy = 50 * Math.cos(angle);
+        }
+        ctx.fillText(name, t.x + ox - 10, t.y + oy + 4);
+      }
+    }
+  }
+}
+
+function drawAirportLabel() {
+  if (!toggleState.showAirport || !staticData) return;
+  const {airport} = staticData;
+  const cx = airport.coordinates.x;
+  const cy = airport.coordinates.y;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '13px monospace';
+  const w = ctx.measureText(airport.icao).width;
+  ctx.fillText(airport.icao, cx - w / 2, cy - 18);
+}
+
+function drawVors() {
+  if (!toggleState.showVor || !staticData) return;
+  ctx.fillStyle = '#0064ff';
+  ctx.strokeStyle = '#0064ff';
+  ctx.font = '13px monospace';
+  for (const [vorId, vor] of Object.entries(staticData.vor_stations)) {
+    const {x, y} = vor.coordinates;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillText(vorId, x - 10, y - 10);
+  }
+}
+
+function drawNdbs() {
+  if (!toggleState.showNdb || !staticData) return;
+  ctx.fillStyle = '#ff00ff';
+  ctx.strokeStyle = '#ff00ff';
+  ctx.font = '13px monospace';
+  for (const [ndbId, ndb] of Object.entries(staticData.ndb_stations)) {
+    const {x, y} = ndb.coordinates;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillText(ndbId, x - 10, y - 12);
+  }
+}
+
+function drawWaypoints() {
+  if (!toggleState.showWaypoints || !staticData) return;
+  ctx.strokeStyle = '#ffff00';
+  ctx.fillStyle = '#ffff00';
+  ctx.lineWidth = 2;
+  ctx.font = '13px monospace';
+  for (const [wptId, wpt] of Object.entries(staticData.rnav_waypoints)) {
+    const {x, y} = wpt.coordinates;
+    const s = 6;
+    ctx.beginPath();
+    ctx.moveTo(x - s, y);
+    ctx.lineTo(x, y - s);
+    ctx.lineTo(x + s, y);
+    ctx.lineTo(x, y + s);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fillText(wptId, x - 10, y - 10);
+  }
+}
+
+function aircraftTag(ac, ctrl) {
+  if (ctrl && ac.star) return `${ac.callsign} ${ac.star}`;
+
+  const ias = Math.round(ac.airspeed);
+  const alt = Math.floor(ac.altitude / 100);
+  const hdg = Math.round(ac.heading);
+  const tIas = Math.round(ac.target_airspeed);
+  const tAlt = Math.floor(ac.target_altitude / 100);
+  const tHdg = Math.round(ac.target_heading);
+  const iasStr = ias !== tIas ? `${ias}->${tIas}` : `${ias}`;
+  const altStr = alt !== tAlt ? `${alt}->${tAlt}` : `${alt}`;
+  const hdgStr = hdg !== tHdg
+    ? `${String(hdg).padStart(3, '0')}->${String(tHdg).padStart(3, '0')}`
+    : `${String(hdg).padStart(3, '0')}`;
+
+  if (ac.holding) return `${ac.callsign} ${iasStr} ${altStr} H`;
+  if (ac.target_wpt) return `${ac.callsign} ${iasStr} ${altStr} ${ac.target_wpt}`;
+  if (ac.runway) {
+    const altPart = (ac.gs && !ctrl) ? 'GS' : altStr;
+    const hdgPart = (ac.loc && !ctrl) ? 'LOC' : hdgStr;
+    const appendix = [];
+    if (!ac.loc) appendix.push('loc');
+    if (!ac.gs) appendix.push('gs');
+    let out = `${ac.callsign} ${iasStr} ${altPart} ${hdgPart} ${ac.runway}`;
+    if (appendix.length) out += ' ' + appendix.join(' ');
+    return out;
+  }
+  return `${ac.callsign} ${iasStr} ${altStr} ${hdgStr}`;
+}
+
+function drawAircraft(state) {
+  if (!state) return;
+  ctx.font = '13px monospace';
+  for (const ac of state.aircraft) {
+    const traj = ac.trajectory || [];
+    for (let i = 0; i < traj.length; i++) {
+      const [tx, ty] = traj[i];
+      const alpha = traj.length > 1 ? (i + 1) / traj.length : 1;
+      ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(tx, ty, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const color = ac.collision_warning ? '#ff0000' : '#ffffff';
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(ac.x, ac.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    const label = toggleState.aircraftDetails ? aircraftTag(ac, ctrlHeld) : ac.callsign;
+    ctx.fillStyle = color;
+    const lines = wrapLabel(label, TAG_MAX_CHARS);
+    const lineHeight = 14;
+    const baseY = ac.y - 12;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const w = ctx.measureText(line).width;
+      const y = baseY - (lines.length - 1 - i) * lineHeight;
+      ctx.fillText(line, ac.x - w / 2, y);
+    }
+  }
+}
+
+const TAG_MAX_CHARS = 16;
+
+function wrapLabel(text, maxChars) {
+  if (text.length <= maxChars) return [text];
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    if (!current) {
+      current = word;
+    } else if ((current + ' ' + word).length <= maxChars) {
+      current += ' ' + word;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function drawStars() {
+  if (!staticData) return;
+  const procs = staticData.star_procedures || {};
+  const wpts = staticData.rnav_waypoints || {};
+  ctx.strokeStyle = '#b266ff';
+  ctx.lineWidth = 2;
+  for (const [toggleKey, procName] of STAR_TOGGLES) {
+    if (!toggleState[toggleKey]) continue;
+    const steps = procs[procName];
+    if (!steps || steps.length < 2) continue;
+    ctx.beginPath();
+    let started = false;
+    for (const step of steps) {
+      const wp = wpts[step.waypoint];
+      if (!wp) continue;
+      const {x, y} = wp.coordinates;
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+function draw(state) {
+  if (!staticData) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#191919';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawRings();
+  drawRunways();
+  drawAirportLabel();
+  drawVors();
+  drawNdbs();
+  drawStars();
+  drawWaypoints();
+  drawAircraft(state);
+}
+
+function renderStrips(state) {
+  stripsEl.innerHTML = '';
+  for (const ac of state.aircraft) {
+    const div = document.createElement('div');
+    div.className = 'strip' + (ac.collision_warning ? ' warn' : '');
+    const tag = aircraftTag(ac, ctrlHeld);
+    const tagInfo = tag.startsWith(ac.callsign + ' ')
+      ? tag.slice(ac.callsign.length + 1)
+      : tag;
+    div.innerHTML =
+      '<div class="cs">' + ac.callsign + '</div>' +
+      '<div class="info">' + tagInfo + '</div>';
+    div.addEventListener('click', () => {
+      cmdInput.value = ac.callsign + ' ';
+      cmdInput.focus();
+    });
+    stripsEl.appendChild(div);
+  }
+}
+
+function updateHud(state) {
+  hudScore.textContent =
+    `Landed: ${state.scoring.num_landed}  ` +
+    `Violation: ${state.scoring.violation_seconds}s  ` +
+    `Exits: ${state.scoring.improper_exits}`;
+  hudSpawnRate.textContent = `${state.spawn_rate}s`;
+
+  fastForward = state.fast_forward;
+  speedBtn.textContent = `Speed: ${fastForward}x`;
+  speedBtn.classList.toggle('active', fastForward !== 1);
+  ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
+
+  pausedIndicator.style.display = paused ? 'block' : 'none';
+  pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+  pauseBtn.classList.toggle('active', paused);
+
+  if (state.crash.occurred) {
+    crashOverlay.style.display = 'flex';
+    crashOverlay.textContent = state.crash.message;
+  } else {
+    crashOverlay.style.display = 'none';
+  }
+
+  refreshDirButtons(state.spawn_directions, state.star_mode);
+  renderStrips(state);
+}
+
+function refreshToggleButtons() {
+  document.querySelectorAll('.toggle-btn[data-toggle]').forEach(btn => {
+    const key = btn.dataset.toggle;
+    btn.classList.toggle('active', !!toggleState[key]);
+  });
+}
+
+function refreshDirButtons(activeDirs, starMode) {
+  document.querySelectorAll('.toggle-btn[data-dir]').forEach(btn => {
+    btn.classList.toggle('active', activeDirs.includes(btn.dataset.dir));
+    btn.disabled = !!starMode;
+    btn.style.opacity = starMode ? '0.4' : '';
+  });
+}
+
+async function init() {
+  const state = await getJson('/state');
+  staticData = state.static;
+  resizeCanvas(staticData.radar_side);
+  fitRadar();
+  window.addEventListener('resize', fitRadar);
+  lastState = state;
+  refreshToggleButtons();
+  draw(state);
+  updateHud(state);
+  setInterval(tick, 1000);
+}
+
+async function tick() {
+  let state;
+  if (paused) {
+    state = await getJson('/state');
+  } else {
+    state = await postJson('/step', {});
+  }
+  lastState = state;
+  draw(state);
+  updateHud(state);
+}
+
+async function setSpeed(multiplier) {
+  const r = await postJson('/speed', {multiplier});
+  fastForward = r.fast_forward;
+  speedBtn.textContent = `Speed: ${fastForward}x`;
+  speedBtn.classList.toggle('active', fastForward !== 1);
+  ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
+}
+
+async function bumpSpawnRate(delta) {
+  if (!lastState) return;
+  const cur = lastState.spawn_rate;
+  const next = Math.max(20, cur + delta);
+  if (next === cur) return;
+  await postJson('/spawn_rate', {rate: next});
+}
+
+async function toggleSpawnDir(dir) {
+  if (!lastState) return;
+  const cur = [...lastState.spawn_directions];
+  let next;
+  if (cur.includes(dir)) {
+    if (cur.length <= 1) {
+      next = cur;
+    } else {
+      next = cur.filter(d => d !== dir);
+    }
+  } else {
+    next = [...cur, dir];
+  }
+  await postJson('/spawn_directions', {directions: next});
+}
+
+speedBtn.addEventListener('click', () => setSpeed(fastForward === 1 ? 10 : 1));
+pauseBtn.addEventListener('click', () => {
+  paused = !paused;
+  pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+  pauseBtn.classList.toggle('active', paused);
+  pausedIndicator.style.display = paused ? 'block' : 'none';
+  ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
+});
+
+document.querySelectorAll('.toggle-btn[data-toggle]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.toggle;
+    toggleState[key] = !toggleState[key];
+    refreshToggleButtons();
+    if (lastState) draw(lastState);
+  });
+});
+
+document.querySelectorAll('.toggle-btn[data-dir]').forEach(btn => {
+  btn.addEventListener('click', () => toggleSpawnDir(btn.dataset.dir));
+});
+
+document.getElementById('ratePlus').addEventListener('click', () => bumpSpawnRate(10));
+document.getElementById('rateMinus').addEventListener('click', () => bumpSpawnRate(-10));
+
+cmdInput.addEventListener('keydown', async (e) => {
+  if (e.key === 'Escape') {
+    cmdInput.blur();
+    return;
+  }
+  if (e.key !== 'Enter') return;
+  const text = cmdInput.value.trim();
+  if (!text) return;
+  const parts = text.split(/\s+/);
+  if (parts.length < 2) {
+    cmdInput.value = '';
+    return;
+  }
+  const callsign = parts[0];
+  const cmd = parts.slice(1).join(' ');
+  const r = await postJson('/command', {callsign, command: cmd});
+  if (r && r.category === 'invalid') {
+    appendScript('invalid', `INVALID: ${r.message}`);
+  } else if (r && r.category === 'unable') {
+    appendScript('unable', `UNABLE: ${r.message}`);
+  } else if (r && r.category === 'success') {
+    if (r.atc) appendScript('atc', r.atc);
+    if (r.pilot) appendScript('pilot', r.pilot);
+    cmdInput.value = '';
+  }
+});
+
+const SCRIPT_MAX = 100;
+const scriptMessages = [];
+const scriptListEl = document.getElementById('scriptList');
+
+function appendScript(type, text) {
+  scriptMessages.push({type, text});
+  while (scriptMessages.length > SCRIPT_MAX) scriptMessages.shift();
+  const div = document.createElement('div');
+  div.className = 'script-msg ' + type;
+  div.textContent = text;
+  scriptListEl.appendChild(div);
+  while (scriptListEl.childElementCount > SCRIPT_MAX) {
+    scriptListEl.removeChild(scriptListEl.firstChild);
+  }
+  scriptListEl.scrollTop = scriptListEl.scrollHeight;
+}
+
+function repaintAfterCtrl() {
+  if (lastState) {
+    draw(lastState);
+    renderStrips(lastState);
+  }
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Control' && !ctrlHeld) {
+    ctrlHeld = true;
+    repaintAfterCtrl();
+  }
+});
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'Control' && ctrlHeld) {
+    ctrlHeld = false;
+    repaintAfterCtrl();
+  }
+});
+window.addEventListener('blur', () => {
+  if (ctrlHeld) {
+    ctrlHeld = false;
+    repaintAfterCtrl();
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (isTyping()) return;
+  const key = e.key;
+  if (key === 'Tab') {
+    e.preventDefault();
+    setSpeed(fastForward === 1 ? 10 : 1);
+    return;
+  }
+  if (key === 'p' || key === 'P') {
+    paused = !paused;
+    pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+    pauseBtn.classList.toggle('active', paused);
+    pausedIndicator.style.display = paused ? 'block' : 'none';
+    ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
+    return;
+  }
+  const toggleMap = {
+    a: 'showAirport', A: 'showAirport',
+    r: 'showRings', R: 'showRings',
+    v: 'showVor', V: 'showVor',
+    n: 'showNdb', N: 'showNdb',
+    w: 'showWaypoints', W: 'showWaypoints',
+    u: 'showRunwayNames', U: 'showRunwayNames',
+    d: 'aircraftDetails', D: 'aircraftDetails',
+    '1': 'showStar1', '2': 'showStar2', '3': 'showStar3',
+    '4': 'showStar4', '5': 'showStar5', '6': 'showStar6',
+  };
+  if (toggleMap[key]) {
+    toggleState[toggleMap[key]] = !toggleState[toggleMap[key]];
+    refreshToggleButtons();
+    if (lastState) draw(lastState);
+    return;
+  }
+  if (key === '+' || key === '=') { bumpSpawnRate(10); return; }
+  if (key === '-' || key === '_') { bumpSpawnRate(-10); return; }
+  if (key === 'ArrowUp')    { e.preventDefault(); toggleSpawnDir('N'); return; }
+  if (key === 'ArrowDown')  { e.preventDefault(); toggleSpawnDir('S'); return; }
+  if (key === 'ArrowLeft')  { e.preventDefault(); toggleSpawnDir('W'); return; }
+  if (key === 'ArrowRight') { e.preventDefault(); toggleSpawnDir('E'); return; }
+});
+
+canvas.addEventListener('click', (e) => {
+  if (!lastState) return;
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width / rect.width;
+  const sy = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * sx;
+  const y = (e.clientY - rect.top) * sy;
+  let best = null;
+  let bestDist = 50;
+  for (const ac of lastState.aircraft) {
+    const dx = ac.x - x;
+    const dy = ac.y - y;
+    const d = Math.hypot(dx, dy);
+    if (d < bestDist) { bestDist = d; best = ac; }
+  }
+  if (best) {
+    cmdInput.value = best.callsign + ' ';
+    cmdInput.focus();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
