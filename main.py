@@ -1,38 +1,52 @@
+import argparse
+import signal
 import sys
-import pygame
-from display.pygame_display import RadarDisplay
 
-import asyncio
+import app as app_module
+from app import app, init_simulation
 
-async def main():
-    pygame.init()
-    airport_name = "egll"
-    info = pygame.display.Info()
-    screen_width = info.current_w
-    screen_height = info.current_h
-    radar = RadarDisplay(screen_width, screen_height, airport_name)
-    clock = pygame.time.Clock()
 
-    running = True
-    UPDATE_INTERVAL = 0.25
-    accumulator = 0.0
-    while running:
-        dt = clock.tick(60) / 1000.0
-        accumulator += dt
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                running = False
-            radar.handle_event(event)
-        while accumulator >= UPDATE_INTERVAL:
-            radar.update(UPDATE_INTERVAL)
-            accumulator -= UPDATE_INTERVAL
-        pygame.display.flip()
-        await asyncio.sleep(0)
+def main():
+    parser = argparse.ArgumentParser(description='ATC Radar web server')
+    parser.add_argument(
+        '--spawn_single',
+        action='store_true',
+        help='Spawn one aircraft at a time (next spawn after landed or improper exit)',
+    )
+    parser.add_argument(
+        '--record',
+        action='store_true',
+        help='Write human RL training CSV under human_data/',
+    )
+    parser.add_argument(
+        '--airport',
+        default='egll',
+        help='Airport ICAO (data/<icao>.json + data/<icao>_navigation.json must exist)',
+    )
+    parser.add_argument(
+        '--star',
+        action='store_true',
+        help='Spawn aircraft on a random STAR procedure (edge-direction selector disabled)',
+    )
+    parser.add_argument('--host', default='127.0.0.1')
+    parser.add_argument('--port', type=int, default=5000)
 
-    pygame.quit()
-    sys.exit()
+    args = parser.parse_args()
+    init_simulation(spawn_single=args.spawn_single, record=args.record,
+                    airport=args.airport, star_mode=args.star)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    def _shutdown_record(signum, frame):
+        if app_module.recorder:
+            app_module.recorder.close()
+        sys.exit(0)
+
+    if args.record:
+        signal.signal(signal.SIGINT, _shutdown_record)
+        if hasattr(signal, 'SIGTERM'):
+            signal.signal(signal.SIGTERM, _shutdown_record)
+
+    app.run(host=args.host, port=args.port, debug=False)
+
+
+if __name__ == '__main__':
+    main()

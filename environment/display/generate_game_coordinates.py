@@ -2,8 +2,6 @@ import math
 import json
 import os
 
-from params import *
-
 def nm_distance(lat1, lon1, lat2, lon2):
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
@@ -25,19 +23,17 @@ def latlon_to_xy(latlons, ref=None):
         coords.append((x, y))
     return coords
 
-def generate_game_coordinates(
-    screen_width=1600,
-    screen_height=800,
-    left_edge_ref_vor='CPT',
-    distance_ref_vor_1='OCK',
-    distance_ref_vor_2='BNN'
-):
+def generate_game_coordinates(screen_width=800, screen_height=800, nm_range=60, airport_name="egll"):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.join(os.path.dirname(script_dir), 'data')
-    with open(os.path.join(data_dir, 'egll.json'), 'r') as f:
+    name = airport_name.lower()
+    with open(os.path.join(data_dir, f'{name}.json'), 'r') as f:
         airport_data = json.load(f)
-    with open(os.path.join(data_dir, 'egll_navigation.json'), 'r') as f:
+    with open(os.path.join(data_dir, f'{name}_navigation.json'), 'r') as f:
         navigation_data = json.load(f)
+
+    nm_per_pixel = nm_range / screen_width
+
     all_coords = {}
     airport_lat = airport_data['airport']['coordinates']['latitude']
     airport_lon = airport_data['airport']['coordinates']['longitude']
@@ -48,13 +44,9 @@ def generate_game_coordinates(
         thresholds = pair_data.get('thresholds', {})
         th_dict = {}
         for end_id, end_data in thresholds.items():
-            lat = end_data['latitude']
-            lon = end_data['longitude']
-            th_dict[end_id] = (lat, lon)
+            th_dict[end_id] = (end_data['latitude'], end_data['longitude'])
         all_coords['runways'][pair_id] = {'thresholds': th_dict}
     all_coords['vor_stations'] = {}
-    dist_vor1_coord = None
-    dist_vor2_coord = None
     for vor_id, vor_data in navigation_data['navigation']['vor_stations'].items():
         lat = vor_data['coordinates']['latitude']
         lon = vor_data['coordinates']['longitude']
@@ -62,10 +54,6 @@ def generate_game_coordinates(
             'coordinates': (lat, lon),
             'name': vor_data['name']
         }
-        if vor_id == distance_ref_vor_1:
-            dist_vor1_coord = (lat, lon)
-        if vor_id == distance_ref_vor_2:
-            dist_vor2_coord = (lat, lon)
     all_coords['rnav_waypoints'] = {}
     for wpt_id, wpt_data in navigation_data['navigation']['rnav_waypoints'].items():
         all_coords['rnav_waypoints'][wpt_id] = {
@@ -85,6 +73,7 @@ def generate_game_coordinates(
             ),
             'name': ndb_data['name']
         }
+
     all_latlon_pairs = [airport_ref]
     coord_mapping = {'airport': 0}
     runway_mapping = {}
@@ -105,19 +94,13 @@ def generate_game_coordinates(
     for ndb_id, ndb_data in all_coords['ndb_stations'].items():
         ndb_mapping[ndb_id] = len(all_latlon_pairs)
         all_latlon_pairs.append(ndb_data['coordinates'])
-    xy_coords = latlon_to_xy(all_latlon_pairs, airport_ref)
-    ref_vor_xy = xy_coords[vor_mapping[left_edge_ref_vor]]
-    ref_vor_target_x = 0.1 * screen_width - screen_width / 2
-    scale_factor = ref_vor_target_x / ref_vor_xy[0] if ref_vor_xy[0] != 0 else 1.0
-    scaled_coords = [(x * scale_factor, y * scale_factor) for x, y in xy_coords]
-    game_coords = [(x + screen_width / 2, -y + screen_height / 2) for x, y in scaled_coords]
-    dist_vor1_game = game_coords[vor_mapping[distance_ref_vor_1]]
-    dist_vor2_game = game_coords[vor_mapping[distance_ref_vor_2]]
-    pixel_distance = math.hypot(dist_vor1_game[0] - dist_vor2_game[0],
-                                dist_vor1_game[1] - dist_vor2_game[1])
-    nm_distance_vors = nm_distance(dist_vor1_coord[0], dist_vor1_coord[1],
-                                   dist_vor2_coord[0], dist_vor2_coord[1])
-    nm_per_pixel = nm_distance_vors / pixel_distance if pixel_distance != 0 else 0.0
+
+    nm_coords = latlon_to_xy(all_latlon_pairs, airport_ref)
+    game_coords = [
+        (nm_x / nm_per_pixel + screen_width / 2,
+         -nm_y / nm_per_pixel + screen_height / 2)
+        for nm_x, nm_y in nm_coords
+    ]
     output_data = {
         'screen_info': {
             'width': screen_width,
@@ -135,7 +118,8 @@ def generate_game_coordinates(
         'runways': {},
         'vor_stations': {},
         'ndb_stations': {},
-        'rnav_waypoints': {}
+        'rnav_waypoints': {},
+        'star_procedures': navigation_data.get('star_procedures', {})
     }
     for pair_id, ends_map in runway_mapping.items():
         output_data['runways'][pair_id] = {'thresholds': {}}
@@ -171,10 +155,4 @@ def generate_game_coordinates(
                 'y': game_coords[coord_idx][1]
             }
         }
-    output_file = os.path.join(data_dir, 'egll_game.json')
-    with open(output_file, 'w') as f:
-        json.dump(output_data, f, indent=2)
     return output_data
-
-if __name__ == "__main__":
-    generate_game_coordinates()
