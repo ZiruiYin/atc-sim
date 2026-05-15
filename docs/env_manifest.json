@@ -1,0 +1,15 @@
+[
+  "environment/__init__.py",
+  "environment/core/__init__.py",
+  "environment/core/aircraft.py",
+  "environment/core/aircraft_spawner.py",
+  "environment/core/collision_monitor.py",
+  "environment/core/human_data_logger.py",
+  "environment/core/simulation.py",
+  "environment/data/test.json",
+  "environment/data/test_navigation.json",
+  "environment/display/__init__.py",
+  "environment/display/generate_game_coordinates.py",
+  "environment/params.py",
+  "environment/utils.py"
+]
