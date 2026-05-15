@@ -1,25 +1,19 @@
 from flask import Flask, jsonify, request, send_from_directory
 
-from environment import HumanDataRecorder, SimulationEnv
+from environment import SimulationEnv
 
 app = Flask(__name__, static_folder='static')
 
 RADAR_SIDE = 800
 sim = None
-recorder = None
 
 
-def init_simulation(spawn_single=False, record=False, airport="egll", star_mode=False):
-    global sim, recorder
-    recorder = HumanDataRecorder(spawn_single=spawn_single) if record else None
-    if recorder:
-        recorder.start()
+def init_simulation(airport="test", star_mode=False):
+    global sim
     sim = SimulationEnv(
         radar_side=RADAR_SIDE,
         airport_name=airport,
-        spawn_single=spawn_single,
         star_mode=star_mode,
-        recorder=recorder,
     )
 
 
@@ -79,6 +73,34 @@ def spawn_directions():
     dirs = data.get('directions', [])
     sim.set_spawn_directions(dirs)
     return jsonify({"ok": True, "spawn_directions": sim.spawn_directions})
+
+
+@app.route('/restart', methods=['POST'])
+def restart():
+    data = request.get_json(force=True) or {}
+    sim.restart(
+        spawn_single=data.get('spawn_single'),
+        star_mode=data.get('star_mode'),
+        airport_name=data.get('airport_name'),
+    )
+    return jsonify(sim.get_state())
+
+
+@app.route('/recording/start', methods=['POST'])
+def recording_start():
+    ok = sim.start_recording()
+    return jsonify({"ok": bool(ok), "recording": sim.is_recording()})
+
+
+@app.route('/recording/stop', methods=['POST'])
+def recording_stop():
+    csv_text, filename = sim.stop_recording()
+    return jsonify({
+        "ok": csv_text is not None,
+        "csv": csv_text or "",
+        "filename": filename or "",
+        "recording": sim.is_recording(),
+    })
 
 
 if __name__ == '__main__':
