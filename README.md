@@ -1,6 +1,6 @@
 # ATC Simulator — User Manual
 
-A browser-based approach controller simulator. You vector inbound traffic onto the ILS and land them. Default airport is EGLL (London Heathrow); a small `test` airport is also bundled.
+A browser-based approach controller simulator. You vector inbound traffic onto the ILS and land them. Default airport is `test` (a compact training airport); EGLL (London Heathrow) is kept in the repo as legacy reference but is not deployed.
 
 For internals and architecture, see `doc/architecture.md`, `doc/behavior.md`, and `doc/logger.md`.
 
@@ -17,11 +17,44 @@ Then open <http://127.0.0.1:5000>.
 
 | Flag | Meaning |
 |---|---|
-| `--airport <icao>` | Airport to load (default `egll`; `test` is also available) |
+| `--airport <icao>` | Airport to load (default `test`; `egll` is legacy/local-only) |
 | `--star` | Spawn aircraft on random STAR procedures; disables the spawn-direction selector |
-| `--spawn_single` | Spawn the next aircraft only after the previous has landed or exited |
-| `--record` | Append per-second CSV logs to `human_data/` (see `doc/logger.md`) |
 | `--host`, `--port` | Network bind options |
+
+Single-aircraft mode and CSV recording were CLI flags previously — they are now in-game buttons (see "Bottom — command bar" below).
+
+## Deploying to GitHub Pages
+
+The same `static/index.html` can run without a Flask backend: the simulator is loaded into the browser via Pyodide (Python compiled to WebAssembly) and the frontend talks to it directly instead of over HTTP. The visitor needs no Python, pip, or server — just a browser.
+
+Step by step:
+
+1. **Build the static site.** From the repo root:
+   ```bash
+   python build_pages.py
+   ```
+   This regenerates `docs/` from `static/index.html` + `environment/`. Run this any time you change the env code, the frontend, or the airport data.
+
+2. **Commit the build output.**
+   ```bash
+   git add docs/ build_pages.py
+   git commit -m "Build for Pages"
+   git push origin main
+   ```
+
+3. **Configure GitHub Pages (one-time).** In the repo on github.com:
+   - Settings → Pages
+   - Source: **Deploy from a branch**
+   - Branch: **`main`**, Folder: **`/docs`**
+   - Save
+
+4. **Wait ~1 minute** for the first deploy. The Pages status indicator in the Settings page turns green and shows the URL.
+
+5. **Visit your site** at `https://<your-github-username>.github.io/<repo-name>/`.
+
+Future updates: re-run step 1, commit, push. Pages rebuilds automatically.
+
+First load downloads Pyodide (~10 MB, cached by the browser thereafter) and takes a few seconds to initialize. EGLL data is excluded from the deployment — only the `test` airport ships.
 
 ---
 
@@ -88,6 +121,8 @@ Live transcript of ATC and pilot radio calls, plus rejection messages:
 - **Command box**: type `CALLSIGN COMMAND` and press `Enter`. Press `Esc` to release focus. Clicking an aircraft on the radar, or a flight strip, pre-fills the callsign.
 - **Speed**: toggles 1× ⇄ 10× (also `Tab`). In 10×, the radar updates the same once-per-second cadence but the simulation advances 10 simulated seconds per update.
 - **Pause**: pauses the simulation (also `P`).
+- **Single**: toggles single-aircraft mode. Clicking **restarts the simulation** (wipes the current aircraft list and score) and spawns one aircraft at a time — the next plane only appears after the previous lands or exits the radar. Click again to restart in normal multi-aircraft mode. Button label shows `Single: on` / `Single: off`.
+- **Record**: starts CSV recording from the next simulated second. Click again to stop; the CSV file downloads automatically to your browser's downloads folder, named `YYYYMMDD_HHMMSS_{single|multiple}.csv`. The schema is the same as `doc/logger.md`.
 
 ### Keyboard shortcuts
 
