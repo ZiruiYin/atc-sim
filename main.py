@@ -11,15 +11,15 @@ def main():
         help='Airport ICAO (default: test). EGLL is legacy and not deployed.',
     )
     parser.add_argument(
-        '--star',
+        '--free_mode',
         action='store_true',
-        help='Spawn aircraft on a random STAR procedure (edge-direction selector disabled)',
+        help='Disable STAR procedures; spawn from radar edges (free vectoring). Default is STAR.',
     )
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--port', type=int, default=5000)
 
     args = parser.parse_args()
-    init_simulation(airport=args.airport, star_mode=args.star)
+    init_simulation(airport=args.airport, star_mode=not args.free_mode)
     app.run(host=args.host, port=args.port, debug=False)
 
 

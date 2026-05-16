@@ -1,14 +1,22 @@
+import os
+
 from flask import Flask, jsonify, request, send_from_directory
 
 from environment import SimulationEnv
 
-app = Flask(__name__, static_folder='static')
+# Repo root is also the GitHub Pages root. We serve index.html and the
+# environment/ tree from here so the same paths work both ways:
+#   - Local Flask:   http://127.0.0.1:5000/{environment/foo, env_manifest.json}
+#   - GitHub Pages:  https://.../{environment/foo, env_manifest.json}
+# No static_folder= argument; everything is served explicitly below.
+ROOT = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__)
 
 RADAR_SIDE = 800
 sim = None
 
 
-def init_simulation(airport="test", star_mode=False):
+def init_simulation(airport="test", star_mode=True):
     global sim
     sim = SimulationEnv(
         radar_side=RADAR_SIDE,
@@ -19,7 +27,17 @@ def init_simulation(airport="test", star_mode=False):
 
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    return send_from_directory(ROOT, 'index.html')
+
+
+@app.route('/env_manifest.json')
+def env_manifest():
+    return send_from_directory(ROOT, 'env_manifest.json')
+
+
+@app.route('/environment/<path:filename>')
+def environment_files(filename):
+    return send_from_directory(os.path.join(ROOT, 'environment'), filename)
 
 
 @app.route('/state', methods=['GET'])

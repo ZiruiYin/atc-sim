@@ -18,43 +18,43 @@ Then open <http://127.0.0.1:5000>.
 | Flag | Meaning |
 |---|---|
 | `--airport <icao>` | Airport to load (default `test`; `egll` is legacy/local-only) |
-| `--star` | Spawn aircraft on random STAR procedures; disables the spawn-direction selector |
+| `--free_mode` | Disable STAR procedures and spawn from radar edges (free vectoring). Default is STAR mode. |
 | `--host`, `--port` | Network bind options |
 
 Single-aircraft mode and CSV recording were CLI flags previously — they are now in-game buttons (see "Bottom — command bar" below).
 
 ## Deploying to GitHub Pages
 
-The same `static/index.html` can run without a Flask backend: the simulator is loaded into the browser via Pyodide (Python compiled to WebAssembly) and the frontend talks to it directly instead of over HTTP. The visitor needs no Python, pip, or server — just a browser.
+The repo root is also the Pages deployment root — there is no separate build folder. The browser loads `index.html` and Pyodide fetches the `environment/` Python sources directly from the same paths Flask serves locally. One tree, two front-ends.
 
 Step by step:
 
-1. **Build the static site.** From the repo root:
+1. **Regenerate the manifest** if you added/removed files in `environment/`:
    ```bash
    python build_pages.py
    ```
-   This regenerates `docs/` from `static/index.html` + `environment/`. Run this any time you change the env code, the frontend, or the airport data.
+   This rewrites `env_manifest.json` (the list of files Pyodide fetches at boot). Skip this step if you only changed code *inside* existing files — only the file list matters.
 
-2. **Commit the build output.**
+2. **Commit and push:**
    ```bash
-   git add docs/ build_pages.py
-   git commit -m "Build for Pages"
+   git add -A
+   git commit -m "<message>"
    git push origin main
    ```
 
 3. **Configure GitHub Pages (one-time).** In the repo on github.com:
    - Settings → Pages
    - Source: **Deploy from a branch**
-   - Branch: **`main`**, Folder: **`/docs`**
+   - Branch: **`main`**, Folder: **`/ (root)`**
    - Save
 
 4. **Wait ~1 minute** for the first deploy. The Pages status indicator in the Settings page turns green and shows the URL.
 
 5. **Visit your site** at `https://<your-github-username>.github.io/<repo-name>/`.
 
-Future updates: re-run step 1, commit, push. Pages rebuilds automatically.
+Future updates: edit, optionally re-run step 1, commit, push. Pages rebuilds automatically on push to `main`.
 
-First load downloads Pyodide (~10 MB, cached by the browser thereafter) and takes a few seconds to initialize. EGLL data is excluded from the deployment — only the `test` airport ships.
+First load downloads Pyodide (~10 MB, cached by the browser thereafter) and takes a few seconds to initialize. EGLL data is in the repo as legacy reference but excluded from the manifest — only the `test` airport ships to the browser.
 
 ---
 
