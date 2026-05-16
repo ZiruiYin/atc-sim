@@ -756,7 +756,11 @@ function drawWaypoints() {
   }
 }
 
-function aircraftTag(ac, ctrl) {
+// Strip tag (right-panel banners): shows current->target when commanded values
+// differ from current. Radar tag (drawAircraft) uses radar=true to suppress
+// the ->target text; the visual cues (dashed heading line + climb/descend
+// arrow drawn next to the dot) carry that information instead.
+function aircraftTag(ac, ctrl, radar = false) {
   if (ctrl && ac.star) return `${ac.callsign} ${ac.star}`;
 
   const ias = Math.round(ac.airspeed);
@@ -765,11 +769,12 @@ function aircraftTag(ac, ctrl) {
   const tIas = Math.round(ac.target_airspeed);
   const tAlt = Math.floor(ac.target_altitude / 100);
   const tHdg = Math.round(ac.target_heading);
-  const iasStr = ias !== tIas ? `${ias}->${tIas}` : `${ias}`;
-  const altStr = alt !== tAlt ? `${alt}->${tAlt}` : `${alt}`;
-  const hdgStr = hdg !== tHdg
-    ? `${String(hdg).padStart(3, '0')}->${String(tHdg).padStart(3, '0')}`
-    : `${String(hdg).padStart(3, '0')}`;
+  const iasStr = (!radar && ias !== tIas) ? `${ias}->${tIas}` : `${ias}`;
+  const altStr = (!radar && alt !== tAlt) ? `${alt}->${tAlt}` : `${alt}`;
+  const hdgPadded = String(hdg).padStart(3, '0');
+  const hdgStr = (!radar && hdg !== tHdg)
+    ? `${hdgPadded}->${String(tHdg).padStart(3, '0')}`
+    : hdgPadded;
 
   if (ac.holding) return `${ac.callsign} ${iasStr} ${altStr} H`;
   if (ac.target_wpt) return `${ac.callsign} ${iasStr} ${altStr} ${ac.target_wpt}`;
@@ -786,6 +791,52 @@ function aircraftTag(ac, ctrl) {
   return `${ac.callsign} ${iasStr} ${altStr} ${hdgStr}`;
 }
 
+function drawTargetHeadingLine(ac) {
+  if (ac.loc) return;
+  if (Math.round(ac.target_heading) === Math.round(ac.heading)) return;
+  const rad = ac.target_heading * Math.PI / 180;
+  const dx = Math.sin(rad);
+  const dy = -Math.cos(rad);
+  const startX = ac.x + 5 * dx;
+  const startY = ac.y + 5 * dy;
+  const endX = ac.x + 30 * dx;
+  const endY = ac.y + 30 * dy;
+  ctx.save();
+  ctx.strokeStyle = '#ffeb3b';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAltitudeArrow(ac) {
+  if (ac.gs) return;
+  const cur = Math.floor(ac.altitude / 100);
+  const tgt = Math.floor(ac.target_altitude / 100);
+  if (cur === tgt) return;
+  const climbing = tgt > cur;
+  const cx = ac.x + 12;
+  const cy = ac.y;
+  ctx.save();
+  ctx.fillStyle = '#ffeb3b';
+  ctx.beginPath();
+  if (climbing) {
+    ctx.moveTo(cx, cy - 6);
+    ctx.lineTo(cx - 4, cy + 3);
+    ctx.lineTo(cx + 4, cy + 3);
+  } else {
+    ctx.moveTo(cx, cy + 6);
+    ctx.lineTo(cx - 4, cy - 3);
+    ctx.lineTo(cx + 4, cy - 3);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawAircraft(state) {
   if (!state) return;
   ctx.font = '13px monospace';
@@ -799,12 +850,14 @@ function drawAircraft(state) {
       ctx.arc(tx, ty, 3, 0, Math.PI * 2);
       ctx.fill();
     }
+    drawTargetHeadingLine(ac);
     const color = ac.collision_warning ? '#ff0000' : '#ffffff';
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(ac.x, ac.y, 5, 0, Math.PI * 2);
     ctx.fill();
-    const label = toggleState.aircraftDetails ? aircraftTag(ac, ctrlHeld) : ac.callsign;
+    drawAltitudeArrow(ac);
+    const label = toggleState.aircraftDetails ? aircraftTag(ac, ctrlHeld, true) : ac.callsign;
     ctx.fillStyle = color;
     const lines = wrapLabel(label, TAG_MAX_CHARS);
     const lineHeight = 14;
