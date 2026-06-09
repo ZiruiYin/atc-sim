@@ -54,11 +54,4 @@ _internal/
 *.exe
 
 CLAUDE.md
-doc/
-human_data/
 .env
-rl_bc/runs/
-rl_bc/cache/
-rl_bc/rollouts/
-rl_bc/.last_modal_data_sync
-single_plane_bc_dense_spec_v2.md
