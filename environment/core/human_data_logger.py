@@ -20,6 +20,7 @@ FIELDNAMES = [
     'loc',
     'gs',
     'on_ground',
+    'ils_runway',
     'star',
     'target_wpt',
     'terminal',
@@ -162,13 +163,17 @@ class HumanDataRecorder:
       to the user's machine (works under both Flask and Pyodide).
     """
 
-    def __init__(self, spawn_single=False, in_memory=False):
+    def __init__(self, spawn_single=False, in_memory=False, out_path=None):
         self.spawn_single = spawn_single
         self.in_memory = in_memory
         # __file__ is at environment/core/human_data_logger.py; project root is 3 dirs up.
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         sub = 'single_plane' if spawn_single else 'multiple_planes'
         self._human_dir = os.path.join(project_root, 'human_data', sub)
+        # `out_path`: when set (and not in_memory), write to this exact path
+        # instead of the auto-generated human_data/<sub>/<ts>.csv. Used by
+        # offline rollouts that need a predictable output location.
+        self._out_path = out_path
         self._filepath = None
         self._file = None
         self._writer = None
@@ -177,6 +182,10 @@ class HumanDataRecorder:
     def start(self):
         if self.in_memory:
             self._file = io.StringIO()
+        elif self._out_path is not None:
+            os.makedirs(os.path.dirname(self._out_path) or '.', exist_ok=True)
+            self._filepath = self._out_path
+            self._file = open(self._filepath, 'w', newline='', encoding='utf-8')
         else:
             os.makedirs(self._human_dir, exist_ok=True)
             name = datetime.now().strftime('%Y%m%d_%H%M%S.csv')
@@ -223,6 +232,7 @@ class HumanDataRecorder:
             'loc': ac.loc_intercepted,
             'gs': ac.gs_intercepted,
             'on_ground': on_ground_str,
+            'ils_runway': ac.ils_runway or '',
             'star': star_name,
             'target_wpt': target_wpt,
             'terminal': terminal,

@@ -92,11 +92,193 @@
     color: #ffe0b8;
     border-left-color: #e0a040;
   }
+  .script-msg.bc-cmd {
+    background: rgba(80, 130, 180, 0.22);
+    color: #cde2f5;
+    border-left-color: #5aa0e0;
+    font-weight: bold;
+  }
+  #bcDashboard {
+    flex-shrink: 0;
+    padding: 10px 12px 4px 12px;
+    border-bottom: 1px solid #444;
+    background: #1c1a22;
+    /* Hard cap so a large fleet can't push the density radars off-screen.
+       The body itself scrolls; the header stays pinned. */
+    max-height: 38vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  #bcDashboardBody {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    padding-right: 4px;
+    margin-right: -4px;   /* hide scrollbar gutter when no scroll needed */
+    scrollbar-width: thin;
+    scrollbar-color: #444 #1c1a22;
+  }
+  #bcDashboardBody::-webkit-scrollbar { width: 6px; }
+  #bcDashboardBody::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  #bcDashboard h4 {
+    margin: 0 0 6px 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    font-weight: normal;
+    flex-shrink: 0;
+  }
+  .bc-dash-cs {
+    font: 12px monospace;
+    color: #c8d8f0;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .bc-dash-cs .t  { color: #888; font-weight: normal; }
+  .bc-dash-cs .cleared { color: #5bbf6e; font-weight: bold; }
+  .bc-dash-row {
+    display: flex;
+    margin-bottom: 4px;
+    align-items: stretch;
+  }
+  .bc-dash-head {
+    width: 32px;
+    font: 10px monospace;
+    color: #888;
+    display: flex;
+    align-items: center;
+  }
+  .bc-dash-cell {
+    flex: 1;
+    border: 1px solid #2e2e35;
+    border-radius: 3px;
+    padding: 3px 4px;
+    margin-right: 3px;
+    text-align: center;
+    background: #161620;
+  }
+  .bc-dash-cell:last-child { margin-right: 0; }
+  .bc-dash-cell.argmax {
+    border-color: #9c64d0;
+    background: rgba(120, 80, 160, 0.25);
+  }
+  .bc-dash-cell .lbl {
+    font: 9px monospace;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .bc-dash-cell.argmax .lbl { color: #b89cd5; }
+  .bc-dash-cell .val {
+    font: 12px monospace;
+    color: #ccc;
+    margin-top: 1px;
+  }
+  .bc-dash-cell.argmax .val { color: #f0e4ff; font-weight: bold; }
+  .bc-dash-empty {
+    color: #555;
+    font: 12px monospace;
+    font-style: italic;
+  }
+  /* v4 continuous-hdg slider */
+  .bc-hdg-row {
+    display: flex;
+    margin-bottom: 6px;
+    align-items: center;
+    gap: 8px;
+  }
+  .bc-hdg-row .bc-dash-head { width: 32px; }
+  .bc-hdg-track {
+    flex: 1;
+    height: 14px;
+    background: #161620;
+    border: 1px solid #2e2e35;
+    border-radius: 3px;
+    position: relative;
+  }
+  .bc-hdg-track .center {
+    position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+    background: #444;
+  }
+  .bc-hdg-track .needle {
+    position: absolute; top: -3px; width: 4px; height: 20px;
+    background: #9c64d0; border-radius: 1px;
+    transform: translateX(-50%);
+  }
+  .bc-hdg-num {
+    font: 11px monospace;
+    color: #d6c4ec;
+    min-width: 56px;
+    text-align: right;
+  }
   #scriptList:empty::before {
     content: "(no transmissions)";
     color: #555;
     font-size: 12px;
     font-style: italic;
+  }
+  #densityPanel {
+    flex-shrink: 0;
+    padding: 10px 12px;
+    border-top: 1px solid #444;
+    background: #1c2020;
+  }
+  #densityPanel h4 {
+    margin: 0 0 6px 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    font-weight: normal;
+  }
+  #densityPanel h4 #densityCallsign {
+    color: #8ad8ff;
+    font-weight: bold;
+    margin-left: 4px;
+  }
+  #densityPanel h4 #densityHint {
+    color: #555;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 10px;
+    margin-left: 6px;
+  }
+  .dens-radar-row {
+    display: flex;
+    gap: 6px;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .dens-radar-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+  }
+  .dens-label {
+    font: 9px monospace;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  #densityNowCanvas, #densityDeltaCanvas {
+    background: #0e1414;
+    border-radius: 50%;
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1;
+    display: block;
+  }
+  .dens-axis-hint {
+    text-align: center;
+    padding: 4px 0 0 0;
+    font: 9px monospace;
+    color: #555;
   }
   #radarWrap {
     position: relative;
@@ -110,8 +292,8 @@
   }
   #ffIndicator {
     position: absolute;
-    top: 8px;
-    left: 12px;
+    top: 10px;
+    left: 110px;
     color: #ffeb3b;
     font-size: 16px;
     font-weight: bold;
@@ -119,14 +301,64 @@
   }
   #pausedIndicator {
     position: absolute;
-    top: 8px;
-    left: 12px;
+    top: 10px;
+    left: 110px;
     color: #29b6f6;
     font-size: 16px;
     font-weight: bold;
     pointer-events: none;
     display: none;
   }
+  #rolloutIndicator {
+    position: absolute;
+    top: 32px;
+    left: 110px;
+    color: #78c8ff;
+    font-size: 12px;
+    font-weight: bold;
+    pointer-events: none;
+    display: none;
+  }
+  #planningIndicator {
+    position: absolute;
+    top: 10px;
+    left: 110px;
+    color: #ffb84d;
+    font-size: 16px;
+    font-weight: bold;
+    pointer-events: none;
+    display: none;
+  }
+  #planConflictIndicator {
+    position: absolute;
+    top: 32px;
+    left: 110px;
+    color: #ff5050;
+    font-size: 12px;
+    font-weight: bold;
+    pointer-events: none;
+    display: none;
+    white-space: pre;
+  }
+  #restartBtn {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    z-index: 11;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #fff;
+    background: #b71c1c;
+    border: 1px solid #ff5252;
+    border-radius: 4px;
+    cursor: pointer;
+    pointer-events: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+  #restartBtn:hover { background: #d32f2f; }
+  #restartBtn:active { background: #8b0000; }
+  #restartBtn:disabled { opacity: 0.5; cursor: wait; }
   #crashOverlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -270,6 +502,46 @@
     background: #1f1f1f;
     border-top: 2px solid #555;
   }
+  #replayControls {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 16px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: #18221f;
+    border-top: 2px solid #2c5e4a;
+  }
+  #replayControls button {
+    background: #2c5e4a;
+    color: #d8f0e0;
+    border: 1px solid #4aa07c;
+    padding: 4px 14px;
+    font-family: monospace;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  #replayControls button:hover { background: #3a7a60; }
+  #replayControls button.active { background: #5bbf6e; color: #0a1a14; }
+  /* (replayPrev is already ◀ — no transform needed) */
+  #replaySlider {
+    flex: 1;
+    accent-color: #5bbf6e;
+  }
+  #replayInfo {
+    font: 12px monospace;
+    color: #aad7bf;
+    min-width: 150px;
+    text-align: right;
+  }
+  #replayHandoff {
+    background: #b56b1f !important;
+    border-color: #e58f3a !important;
+    color: #fff5e8 !important;
+    font-weight: bold;
+  }
+  #replayHandoff:hover { background: #d27d27 !important; }
   #cmd {
     flex: 1;
     background: #2a2a2a;
@@ -297,16 +569,41 @@
 <div id="app">
   <div id="main">
     <div id="leftPanel">
+      <div id="bcDashboard" style="display:none;">
+        <h4>Predictions</h4>
+        <div id="bcDashboardBody">
+          <div class="bc-dash-empty">(no aircraft)</div>
+        </div>
+      </div>
       <div id="scriptSection" class="panel-section">
         <h4>Script</h4>
         <div id="scriptList"></div>
+      </div>
+      <div id="densityPanel" style="display:none;">
+        <h4>Density · <span id="densityCallsign">--</span>
+          <span id="densityHint">(click a plane)</span></h4>
+        <div class="dens-radar-row">
+          <div class="dens-radar-cell">
+            <div class="dens-label">now</div>
+            <canvas id="densityNowCanvas" width="280" height="280"></canvas>
+          </div>
+          <div class="dens-radar-cell">
+            <div class="dens-label">delta</div>
+            <canvas id="densityDeltaCanvas" width="280" height="280"></canvas>
+          </div>
+        </div>
+        <div class="dens-axis-hint">forward = up · 10 nm radius</div>
       </div>
     </div>
     <div id="radarArea">
       <div id="radarWrap">
         <canvas id="radar" width="800" height="800"></canvas>
+        <button id="restartBtn" title="Wipe the current sim and respawn a fresh aircraft">Restart</button>
         <div id="ffIndicator"></div>
         <div id="pausedIndicator">PAUSED</div>
+        <div id="rolloutIndicator">EVAL: rolling out…</div>
+        <div id="planningIndicator">PLANNING…</div>
+        <div id="planConflictIndicator"></div>
         <div id="crashOverlay"></div>
         <div id="bootOverlay" style="display:none;"></div>
       </div>
@@ -374,6 +671,16 @@
     <button id="singleBtn" title="Restart sim in single-aircraft mode">Single: off</button>
     <button id="recordBtn" title="Start/stop CSV recording; CSV downloads on stop">Record</button>
   </div>
+  <div id="replayControls" style="display:none;">
+    <button id="replayPrev" title="Previous frame (←)">◀</button>
+    <button id="replayPlay" title="Play / Pause (Space)">▶</button>
+    <button id="replayNext" title="Next frame (→)">▶</button>
+    <input id="replaySlider" type="range" min="0" max="0" value="0" />
+    <span id="replayInfo">— / —</span>
+    <button id="replayHandoff"
+            title="Freeze the scenario here and roll forward with the loaded ckpt"
+            style="display:none;">Take over ▶</button>
+  </div>
 </div>
 
 <script>
@@ -384,13 +691,39 @@ const speedBtn = document.getElementById('speedBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const singleBtn = document.getElementById('singleBtn');
 const recordBtn = document.getElementById('recordBtn');
+const restartBtn = document.getElementById('restartBtn');
 const ffIndicator = document.getElementById('ffIndicator');
 const pausedIndicator = document.getElementById('pausedIndicator');
+const rolloutIndicator = document.getElementById('rolloutIndicator');
+const planningIndicator = document.getElementById('planningIndicator');
+const planConflictIndicator = document.getElementById('planConflictIndicator');
 const hudScore = document.getElementById('hudScore');
 const hudSpawnRate = document.getElementById('hudSpawnRate');
 const crashOverlay = document.getElementById('crashOverlay');
 const bootOverlay = document.getElementById('bootOverlay');
 const stripsEl = document.getElementById('strips');
+// Replay-mode controls (hidden by default; revealed on first state with replay.enabled)
+const replayControlsEl = document.getElementById('replayControls');
+const cmdControlsEl = document.getElementById('controls');
+const replayPrevBtn = document.getElementById('replayPrev');
+const replayNextBtn = document.getElementById('replayNext');
+const replayPlayBtn = document.getElementById('replayPlay');
+const replaySliderEl = document.getElementById('replaySlider');
+const replayInfoEl = document.getElementById('replayInfo');
+const replayHandoffBtn = document.getElementById('replayHandoff');
+let replayMode = false;     // becomes true on first state with replay.enabled
+const densityPanel = document.getElementById('densityPanel');
+const densityCallsignEl = document.getElementById('densityCallsign');
+const densityHintEl = document.getElementById('densityHint');
+const densityNowCanvas = document.getElementById('densityNowCanvas');
+const densityDeltaCanvas = document.getElementById('densityDeltaCanvas');
+const densityNowCtx = densityNowCanvas.getContext('2d');
+const densityDeltaCtx = densityDeltaCanvas.getContext('2d');
+
+// Callsign whose density profile is shown in the bottom-left panel.
+// Set when the user clicks an aircraft on the radar or a strip; cleared
+// when that plane lands/exits. Persists across ticks.
+let selectedCallsign = null;
 
 function showBootMessage(msg) {
   if (!msg) { hideBootMessage(); return; }
@@ -406,6 +739,14 @@ let lastState = null;
 let fastForward = 1;
 let paused = false;
 let ctrlHeld = false;
+
+// Rollout overlay (eval mode): when paused and eval_mode is on, we
+// fetch K independent landing trajectories per armed plane and render
+// them as light-blue polylines. Hovering near any point on any line
+// projects red dots onto the other planes' lines at the same sim-time t.
+let rolloutData = null;        // { trajectories: {cs: {origin, rollouts:[[{t,x,y,alt,hdg}, ...], ...] }}, t_live }
+let rolloutLoading = false;
+let rolloutHover = null;       // { x: px, y: py, t: sim-sec since pause }
 
 const toggleState = {
   showAirport: false,
@@ -478,6 +819,12 @@ class HttpEngine {
   restart(opts)              { return postJson('/restart', opts || {}); }
   startRecording()           { return postJson('/recording/start', {}); }
   stopRecording()            { return postJson('/recording/stop', {}); }
+  // Replay controls (no-op when not in replay mode)
+  replaySeek(cursor)         { return postJson('/replay/seek', {cursor}); }
+  replayNext(step = 1)       { return postJson('/replay/next', {step}); }
+  replayPrev(step = 1)       { return postJson('/replay/prev', {step}); }
+  replayHandoff()            { return postJson('/replay/handoff', {}); }
+  rollouts()                 { return postJson('/rollout', {}); }
 }
 
 const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js';
@@ -928,7 +1275,326 @@ function draw(state) {
   drawNdbs();
   drawStars();
   drawWaypoints();
+  drawRolloutOverlay();
+  drawFlightPlanOverlay(state);
   drawAircraft(state);
+  drawRolloutHover();
+}
+
+// Flight-plan overlay (plan mode): thin blue polyline per active plane,
+// from each plane's current cursor to the end of its 200-step plan.
+// Server sends only the remaining tail of each plan so this is just a
+// straight polyline draw. Planes involved in unresolved conflicts get
+// a red line so the offending pair is easy to spot.
+function drawFlightPlanOverlay(state) {
+  if (!state || !state.flight_plans) return;
+  // Set of callsigns involved in at least one unresolved conflict.
+  const conflictCs = new Set();
+  if (state.plan_conflicts) {
+    for (const c of state.plan_conflicts) {
+      conflictCs.add(c.a);
+      conflictCs.add(c.b);
+    }
+  }
+  ctx.save();
+  for (const cs of Object.keys(state.flight_plans)) {
+    const plan = state.flight_plans[cs];
+    if (!plan.states || plan.states.length < 2) continue;
+    if (conflictCs.has(cs)) {
+      ctx.strokeStyle = 'rgba(255, 80, 80, 0.75)';
+      ctx.lineWidth = 1.4;
+    } else {
+      ctx.strokeStyle = 'rgba(140, 200, 255, 0.6)';
+      ctx.lineWidth = 1.0;
+    }
+    ctx.beginPath();
+    ctx.moveTo(plan.states[0].x, plan.states[0].y);
+    for (let i = 1; i < plan.states.length; i++) {
+      ctx.lineTo(plan.states[i].x, plan.states[i].y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// --------------------------------------------------------------------------- //
+// Rollout overlay — light-blue polylines for each landed trajectory.
+// Drawn UNDER the aircraft markers so the white dots stay legible.
+// --------------------------------------------------------------------------- //
+
+function drawRolloutOverlay() {
+  if (!rolloutData || !rolloutData.trajectories) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(120, 200, 255, 0.55)';
+  ctx.lineWidth = 1.2;
+  for (const cs of Object.keys(rolloutData.trajectories)) {
+    const entry = rolloutData.trajectories[cs];
+    for (const traj of entry.rollouts) {
+      if (!traj || traj.length < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(traj[0].x, traj[0].y);
+      for (let i = 1; i < traj.length; i++) {
+        ctx.lineTo(traj[i].x, traj[i].y);
+      }
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// Lookup helpers — find nearest point on any rollout, find each plane's
+// point at a given sim-relative time t.
+function _nearestRolloutPoint(px, py, maxDistPx = 12) {
+  if (!rolloutData || !rolloutData.trajectories) return null;
+  let best = null;
+  let bestD = maxDistPx;
+  for (const cs of Object.keys(rolloutData.trajectories)) {
+    const entry = rolloutData.trajectories[cs];
+    for (let lineIdx = 0; lineIdx < entry.rollouts.length; lineIdx++) {
+      const traj = entry.rollouts[lineIdx];
+      for (let i = 0; i < traj.length; i++) {
+        const p = traj[i];
+        const d = Math.hypot(p.x - px, p.y - py);
+        if (d < bestD) {
+          bestD = d;
+          best = { cs, lineIdx, idx: i, x: p.x, y: p.y, t: p.t };
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function _pointsAtTime(t) {
+  // For each plane (other than/including the hovered one), find the
+  // point on each of its rollouts whose `t` is closest to the cursor's t.
+  // Skip if the rollout already terminated before t.
+  if (!rolloutData || !rolloutData.trajectories) return [];
+  const out = [];
+  for (const cs of Object.keys(rolloutData.trajectories)) {
+    const entry = rolloutData.trajectories[cs];
+    for (let lineIdx = 0; lineIdx < entry.rollouts.length; lineIdx++) {
+      const traj = entry.rollouts[lineIdx];
+      if (!traj.length) continue;
+      const last = traj[traj.length - 1];
+      if (t > last.t) continue;   // already landed by then — skip
+      // Binary search would be nicer; linear is fine for ≤ ~600 points.
+      let bestI = 0;
+      let bestDiff = Infinity;
+      for (let i = 0; i < traj.length; i++) {
+        const diff = Math.abs(traj[i].t - t);
+        if (diff < bestDiff) { bestDiff = diff; bestI = i; }
+      }
+      out.push({
+        cs, lineIdx, idx: bestI,
+        x: traj[bestI].x, y: traj[bestI].y, t: traj[bestI].t,
+      });
+    }
+  }
+  return out;
+}
+
+function drawRolloutHover() {
+  if (!rolloutHover) return;
+  // Red dots on every rollout at the hover's time.
+  const pts = _pointsAtTime(rolloutHover.t);
+  ctx.save();
+  ctx.fillStyle = '#ff4444';
+  for (const p of pts) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Bigger red dot at the cursor's snapped point.
+  ctx.fillStyle = '#ff0000';
+  ctx.beginPath();
+  ctx.arc(rolloutHover.x, rolloutHover.y, 5, 0, Math.PI * 2);
+  ctx.fill();
+  // t-label near the cursor for debugging.
+  ctx.fillStyle = '#ffaaaa';
+  ctx.font = '11px monospace';
+  ctx.fillText(`t+${rolloutHover.t.toFixed(0)}s`,
+               rolloutHover.x + 8, rolloutHover.y - 8);
+  ctx.restore();
+}
+
+// --------------------------------------------------------------------------- //
+// Density plots: two small polar radar screens (now + delta) for the
+// currently selected callsign, fed from state.density. Server pushes a
+// 36-bin angular profile per aircraft per tick; we render them as
+// radial pie wedges. Ego forward = up (12 o'clock). The 36 bins are
+// centered at [-175°, -165°, ..., +175°], so wedge i spans
+// [center-5°, center+5°]. Positive bearings = right of nose
+// (3 o'clock), negative = left (9 o'clock), ±180° = directly behind
+// (6 o'clock).
+//
+// "now"   plot: amplitude → wedge radial extent + saturation (cyan).
+// "delta" plot: signed amplitude → cyan (closing) or red (opening).
+// --------------------------------------------------------------------------- //
+
+function _drawDensityRadar(canvasCtx, values, opts) {
+  const W = canvasCtx.canvas.width;
+  const H = canvasCtx.canvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const rmax = Math.min(cx, cy) - 2;
+  canvasCtx.clearRect(0, 0, W, H);
+
+  // Background range rings.
+  canvasCtx.strokeStyle = '#1a2424';
+  canvasCtx.lineWidth = 1;
+  for (let ring = 1; ring <= 3; ring++) {
+    canvasCtx.beginPath();
+    canvasCtx.arc(cx, cy, rmax * ring / 3, 0, Math.PI * 2);
+    canvasCtx.stroke();
+  }
+  // Outer circle (slightly brighter)
+  canvasCtx.strokeStyle = '#2a3434';
+  canvasCtx.beginPath();
+  canvasCtx.arc(cx, cy, rmax, 0, Math.PI * 2);
+  canvasCtx.stroke();
+  // Forward marker tick at 12 o'clock
+  canvasCtx.strokeStyle = '#3a4848';
+  canvasCtx.beginPath();
+  canvasCtx.moveTo(cx, 0); canvasCtx.lineTo(cx, 4);
+  canvasCtx.moveTo(cx - cx, cy); canvasCtx.lineTo(cx + cx, cy);   // horizontal beam-axis
+  canvasCtx.moveTo(cx, 0); canvasCtx.lineTo(cx, H);                // vertical fwd/aft line
+  canvasCtx.stroke();
+  // Ego dot
+  canvasCtx.fillStyle = '#888';
+  canvasCtx.beginPath();
+  canvasCtx.arc(cx, cy, 2, 0, Math.PI * 2);
+  canvasCtx.fill();
+
+  if (!values || values.length === 0) return;
+  const N = values.length;
+  const wedgeDeg = 360 / N;                       // 10°
+  const halfWedge = wedgeDeg / 2;                  // 5°
+  // Canvas angle convention: 0 rad = +x (3 o'clock), increases CW.
+  // Our bearings: 0° = forward (12 o'clock = -y axis), +90° = right (3 o'clock).
+  // So canvas_angle(bearing_deg) = (bearing_deg - 90) in degrees.
+  const toCanvasRad = deg => (deg - 90) * Math.PI / 180;
+
+  for (let i = 0; i < N; i++) {
+    const v = values[i];
+    if (v === 0) continue;
+    const center = -180 + halfWedge + i * wedgeDeg;   // bin center
+    const a0 = toCanvasRad(center - halfWedge);
+    const a1 = toCanvasRad(center + halfWedge);
+    const t = Math.min(1, Math.abs(v) / opts.maxAbs);
+    const r = rmax * t;
+    let color;
+    if (opts.signed) {
+      if (v >= 0) {
+        // closing: cyan, brighter with magnitude
+        const b = Math.round(180 + 60 * t);
+        const g = Math.round(180 + 50 * t);
+        color = `rgba(80,${g},${b},${0.35 + 0.55 * t})`;
+      } else {
+        // opening: red, brighter with magnitude
+        const r2 = Math.round(200 + 55 * t);
+        color = `rgba(${r2},90,90,${0.35 + 0.55 * t})`;
+      }
+    } else {
+      const g = Math.round(170 + 60 * t);
+      const b = Math.round(210 + 40 * t);
+      color = `rgba(70,${g},${b},${0.4 + 0.55 * t})`;
+    }
+    canvasCtx.fillStyle = color;
+    canvasCtx.beginPath();
+    canvasCtx.moveTo(cx, cy);
+    canvasCtx.arc(cx, cy, r, a0, a1);
+    canvasCtx.closePath();
+    canvasCtx.fill();
+  }
+}
+
+// --------------------------------------------------------------------------- //
+// Replay UI — only visible when the server is in --replay mode.
+// Toggles replayMode, swaps the bottom strip (command input → progress bar),
+// and updates the slider/counter from state.replay each tick.
+// --------------------------------------------------------------------------- //
+
+function renderReplayBar(state) {
+  const r = state.replay;
+  if (!r || !r.enabled) {
+    if (replayMode) {
+      // somehow flipped back — shouldn't happen mid-session
+      replayControlsEl.style.display = 'none';
+      cmdControlsEl.style.display = '';
+      replayMode = false;
+    }
+    return;
+  }
+  if (!replayMode) {
+    replayMode = true;
+    cmdControlsEl.style.display = 'none';
+    replayControlsEl.style.display = '';
+    // Hide irrelevant controls.
+    if (restartBtn) restartBtn.style.display = 'none';
+  }
+  const n = r.n_frames || 0;
+  const c = r.cursor || 0;
+  replaySliderEl.max = String(Math.max(0, n - 1));
+  // Only update slider if user isn't dragging right now.
+  if (!replaySliderEl._dragging) {
+    replaySliderEl.value = String(c);
+  }
+  replayInfoEl.textContent = `frame ${c+1} / ${n}  · sim t=${r.sim_time.toFixed(1)}s`;
+  replayPlayBtn.textContent = paused ? '▶' : '⏸';
+  replayPlayBtn.classList.toggle('active', !paused);
+  // Take-over button: only when watch was started with a ckpt alongside --replay.
+  replayHandoffBtn.style.display = r.handoff_available ? '' : 'none';
+}
+
+function renderDensity(state) {
+  const dens = state.density;
+  if (!dens || !dens.per_callsign) {
+    densityPanel.style.display = 'none';
+    return;
+  }
+  densityPanel.style.display = '';
+
+  // Auto-clear selection if the plane is gone.
+  if (selectedCallsign && !dens.per_callsign[selectedCallsign]) {
+    selectedCallsign = null;
+  }
+  if (!selectedCallsign) {
+    densityCallsignEl.textContent = '--';
+    densityHintEl.style.display = '';
+    _drawDensityRadar(densityNowCtx, null, {signed: false, maxAbs: 1});
+    _drawDensityRadar(densityDeltaCtx, null, {signed: true, maxAbs: 1});
+    return;
+  }
+  densityHintEl.style.display = 'none';
+  densityCallsignEl.textContent = selectedCallsign;
+
+  const payload = dens.per_callsign[selectedCallsign];
+  const nowVals = payload.now || [];
+  const deltaVals = payload.delta || [];
+
+  // FIXED scales — different caps for now vs delta because they live
+  // on completely different magnitude ranges:
+  //
+  //   NOW    = per-plane proximity, bounded in [0, 1].
+  //            1.0 = a plane at d=0 (touching). 0.5 = a plane at 5 nm.
+  //            Cap at 1.0 = per-plane theoretical max → wedges show
+  //            absolute proximity directly.
+  //
+  //   DELTA  = per-tick change in the (smeared) now profile.
+  //            Typical values: ~0.01 for in-bin closing at 0.07 nm/sec,
+  //            ~0.05 for fast closing at 0.5 nm/sec, ~0.15 for a 5°
+  //            bearing drift in one tick. Capping at 0.15 means
+  //            real-world fast motion saturates the wedge — anything
+  //            slower shows up as a proportional sliver. Capping at
+  //            1.0 (the NOW cap) makes all of these invisible.
+  const NOW_MAX_AMP = 1.0;
+  const DELTA_MAX_AMP = 0.05;
+
+  _drawDensityRadar(densityNowCtx, nowVals,
+                    {signed: false, maxAbs: NOW_MAX_AMP});
+  _drawDensityRadar(densityDeltaCtx, deltaVals,
+                    {signed: true, maxAbs: DELTA_MAX_AMP});
 }
 
 function renderStrips(state) {
@@ -946,6 +1612,8 @@ function renderStrips(state) {
     div.addEventListener('click', () => {
       cmdInput.value = ac.callsign + ' ';
       cmdInput.focus();
+      selectedCallsign = ac.callsign;
+      if (lastState) renderDensity(lastState);
     });
     stripsEl.appendChild(div);
   }
@@ -1031,14 +1699,115 @@ async function init() {
   refreshToggleButtons();
   draw(state);
   updateHud(state);
+  renderReplayBar(state);
   setInterval(tick, 1000);
+}
+
+let lastBcSeq = -1;
+const bcDashboardEl = document.getElementById('bcDashboard');
+const bcDashboardBodyEl = document.getElementById('bcDashboardBody');
+
+function renderBcTargetRow(label, formatted) {
+  return `
+    <div class="bc-hdg-row">
+      <div class="bc-dash-head">${label}</div>
+      <div class="bc-hdg-num" style="flex:1; text-align:left; color:#d6c4ec;">
+        ${formatted}
+      </div>
+    </div>`;
+}
+
+function renderBcDashboard(bcState) {
+  if (!bcState || Object.keys(bcState).length === 0) {
+    bcDashboardBodyEl.innerHTML = '<div class="bc-dash-empty">(no aircraft)</div>';
+    return;
+  }
+  let html = '';
+  for (const [cs, s] of Object.entries(bcState)) {
+    const clearedTag = s.cleared ? '<span class="cleared">CLEARED</span>' : '';
+    const mv = s.model_version ? ` <span class="t">${s.model_version}</span>` : '';
+    html += `<div class="bc-dash-cs"><span>${cs} <span class="t">t=${s.t}</span>${mv}</span>${clearedTag}</div>`;
+    html += renderBcTargetRow('HDG', `${s.pred_hdg_deg.toFixed(0)}°`);
+    html += renderBcTargetRow('ALT', `${s.pred_alt_kft.toFixed(1)} kft`);
+    html += renderBcTargetRow('SPD', `${s.pred_spd_kt.toFixed(0)} kt`);
+  }
+  bcDashboardBodyEl.innerHTML = html;
 }
 
 async function tick() {
   const state = paused ? await engine.state() : await engine.step();
   lastState = state;
+
+  // Plan-mode planning indicator — independent of pause; fires while
+  // the backend is busy running replan_all.
+  if (state && state.plan_mode) {
+    planningIndicator.style.display = state.planning ? 'block' : 'none';
+    const parts = [];
+    if (state.plan_conflicts && state.plan_conflicts.length > 0) {
+      const n = state.plan_conflicts.length;
+      const preview = state.plan_conflicts.slice(0, 3)
+        .map(c => `${c.a}↔${c.b} min=${c.min_sep_nm.toFixed(2)}nm@t=${c.min_sep_t}`)
+        .join(', ');
+      const more = n > 3 ? ` +${n-3} more` : '';
+      parts.push(`UNRESOLVED CONFLICTS: ${n}  (${preview}${more})`);
+    }
+    if (state.plan_unplanned && state.plan_unplanned.length > 0) {
+      parts.push(`MODEL-DRIVEN (no plan): ${state.plan_unplanned.join(', ')}`);
+    }
+    if (parts.length > 0) {
+      planConflictIndicator.textContent = parts.join('\n');
+      planConflictIndicator.style.display = 'block';
+    } else {
+      planConflictIndicator.style.display = 'none';
+    }
+  } else {
+    planningIndicator.style.display = 'none';
+    planConflictIndicator.style.display = 'none';
+  }
+
+  // Eval rollout fetch: when eval_mode is on and we just paused,
+  // request a batch of K landing rollouts per armed plane. Held in
+  // rolloutData until unpause. While loading, show the existing data.
+  if (state && state.eval_mode) {
+    if (paused && rolloutData === null && !rolloutLoading) {
+      rolloutLoading = true;
+      rolloutIndicator.style.display = 'block';
+      try {
+        const r = await engine.rollouts();
+        if (r && r.ok) rolloutData = r;
+      } catch (e) {
+        console.warn('rollout fetch failed', e);
+      }
+      rolloutLoading = false;
+      rolloutIndicator.style.display = 'none';
+    }
+    if (!paused && rolloutData !== null) {
+      rolloutData = null;
+      rolloutHover = null;
+    }
+  }
+
   draw(state);
   updateHud(state);
+  renderDensity(state);
+  renderReplayBar(state);
+
+  // Live dashboard: rewritten in place each tick (no log spam).
+  if (state.bc_state !== undefined) {
+    bcDashboardEl.style.display = '';
+    renderBcDashboard(state.bc_state);
+  }
+
+  // Append-only log: cmd + atc/pilot dialog. Per-tick predictions live
+  // in the dashboard above, not here, to keep the scroll calm.
+  if (state.bc_log) {
+    for (const e of state.bc_log) {
+      if (e.seq > lastBcSeq) {
+        appendScript(e.kind, e.text);
+        lastBcSeq = e.seq;
+      }
+    }
+  }
 }
 
 async function setSpeed(multiplier) {
@@ -1082,6 +1851,71 @@ pauseBtn.addEventListener('click', () => {
   ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
 });
 
+// ---- Replay control wiring ----
+// Prev/Next jump by 1 normally, by 10 when ff=10 (so the speed knob doubles
+// as a "step size" for manual scrubbing too).
+replayPrevBtn.addEventListener('click', async () => {
+  const step = (fastForward === 10) ? 10 : 1;
+  const r = await engine.replayPrev(step);
+  lastState = r; draw(r); updateHud(r); renderDensity(r); renderReplayBar(r);
+});
+replayNextBtn.addEventListener('click', async () => {
+  const step = (fastForward === 10) ? 10 : 1;
+  const r = await engine.replayNext(step);
+  lastState = r; draw(r); updateHud(r); renderDensity(r); renderReplayBar(r);
+});
+// Play/pause is just the existing global `paused`.
+replayPlayBtn.addEventListener('click', () => {
+  paused = !paused;
+  pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+  pauseBtn.classList.toggle('active', paused);
+  pausedIndicator.style.display = paused ? 'block' : 'none';
+  replayPlayBtn.textContent = paused ? '▶' : '⏸';
+  replayPlayBtn.classList.toggle('active', !paused);
+});
+// Slider scrub — mark dragging so the per-tick refresh doesn't fight it.
+replaySliderEl.addEventListener('mousedown', () => { replaySliderEl._dragging = true; });
+replaySliderEl.addEventListener('touchstart', () => { replaySliderEl._dragging = true; });
+replaySliderEl.addEventListener('change', async () => {
+  const r = await engine.replaySeek(parseInt(replaySliderEl.value, 10));
+  replaySliderEl._dragging = false;
+  lastState = r; draw(r); updateHud(r); renderDensity(r); renderReplayBar(r);
+});
+// Keyboard shortcuts: ←/→ scrub, only when replay is on and not typing.
+window.addEventListener('keydown', (e) => {
+  if (!replayMode) return;
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); replayPrevBtn.click(); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); replayNextBtn.click(); }
+});
+
+// Take-over: freeze scenario at the current cursor and switch to live
+// ckpt-driven rollout. After this the bottom strip flips back to the
+// normal command/pause/speed bar (next renderReplayBar tick will see
+// state.replay.enabled = false).
+replayHandoffBtn.addEventListener('click', async () => {
+  if (replayHandoffBtn.disabled) return;
+  const c = lastState && lastState.replay && lastState.replay.cursor;
+  if (!confirm(`Take over from frame ${c}? Spawning will be disabled and recording will auto-start.`)) return;
+  replayHandoffBtn.disabled = true;
+  try {
+    const r = await engine.replayHandoff();
+    if (r && r.ok === false) {
+      alert(`Handoff failed: ${r.error || 'unknown'}`);
+      return;
+    }
+    lastState = r;
+    // Flip the bottom strip back to normal controls.
+    replayMode = false;
+    replayControlsEl.style.display = 'none';
+    cmdControlsEl.style.display = '';
+    if (restartBtn) restartBtn.style.display = '';
+    draw(r); updateHud(r); renderDensity(r);
+  } finally {
+    replayHandoffBtn.disabled = false;
+  }
+});
+
 singleBtn.addEventListener('click', async () => {
   if (!lastState) return;
   if (singleBtn.disabled) return;
@@ -1095,6 +1929,20 @@ singleBtn.addEventListener('click', async () => {
     updateHud(newState);
   } finally {
     singleBtn.disabled = false;
+  }
+});
+
+restartBtn.addEventListener('click', async () => {
+  if (restartBtn.disabled) return;
+  restartBtn.disabled = true;
+  try {
+    const newState = await engine.restart({});
+    lastState = newState;
+    staticData = newState.static;
+    draw(newState);
+    updateHud(newState);
+  } finally {
+    restartBtn.disabled = false;
   }
 });
 
@@ -1245,6 +2093,33 @@ document.addEventListener('keydown', (e) => {
   if (key === 'ArrowRight') { e.preventDefault(); toggleSpawnDir('E'); return; }
 });
 
+// Mouse-move on the radar: when rollout data is loaded (eval mode + paused),
+// snap to the nearest rollout point and trigger a redraw so the overlay
+// shows the cursor red dot + sync dots on other planes' lines.
+canvas.addEventListener('mousemove', (e) => {
+  if (!rolloutData) {
+    if (rolloutHover !== null) { rolloutHover = null; draw(lastState); }
+    return;
+  }
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width / rect.width;
+  const sy = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * sx;
+  const y = (e.clientY - rect.top) * sy;
+  const hit = _nearestRolloutPoint(x, y, 14);
+  const changed = (hit === null) !== (rolloutHover === null)
+                  || (hit && rolloutHover
+                      && (hit.cs !== rolloutHover.cs
+                          || hit.lineIdx !== rolloutHover.lineIdx
+                          || hit.idx !== rolloutHover.idx));
+  rolloutHover = hit;
+  if (changed) draw(lastState);
+});
+
+canvas.addEventListener('mouseleave', () => {
+  if (rolloutHover !== null) { rolloutHover = null; draw(lastState); }
+});
+
 canvas.addEventListener('click', (e) => {
   if (!lastState) return;
   const rect = canvas.getBoundingClientRect();
@@ -1263,6 +2138,8 @@ canvas.addEventListener('click', (e) => {
   if (best) {
     cmdInput.value = best.callsign + ' ';
     cmdInput.focus();
+    selectedCallsign = best.callsign;
+    if (lastState) renderDensity(lastState);
   }
 });
 

@@ -83,6 +83,14 @@ class Aircraft:
         self.update_position(delta_t)
 
     def update_landed(self):
+        # Escape hatch for any state that ended up on_ground=True at
+        # altitude > 20 (normally impossible but reachable via plan
+        # playback that force-applies a contradictory recorded state):
+        # if the plane is on the ground and not moving, it's landed,
+        # period — let sim.step remove it on this tick.
+        if self.on_ground and self.airspeed == 0:
+            self.landed = True
+            return
         if self.altitude <= 20:
             if not self.on_ground:
                 if not self.ils_runway:
@@ -259,7 +267,14 @@ class Aircraft:
             self.can_intercept = False
             return
         self.can_intercept = self._can_intercept()
-        if not self.can_intercept:
+        # Once LOC has been captured, keep tracking it regardless of
+        # whether _can_intercept still returns True. The off-centerline
+        # correction in _update_ils_loc can swing target_heading past
+        # the capture cone (e.g. 270° → 236° when far off-centerline,
+        # which is > 30° off the runway heading); if we bail here the
+        # plane gets frozen at that target_heading and just flies away
+        # while still showing loc_intercepted=True.
+        if not self.can_intercept and not self.loc_intercepted:
             return
 
         self._update_ils_loc()
@@ -310,7 +325,13 @@ class Aircraft:
             rwy_extension_hdg = (runway_heading + 180) % 360
 
             aircraft_to_extension_proj = self.nm_per_pixel * projection_distance(self.x, self.y, rwy_extension_hdg, threshold_x, threshold_y)
-            angle_diff = abs(math.degrees(math.asin(aircraft_to_extension_proj / projection_distance_nm)))
+            # Clamp ratio to [-1, 1]: when the plane has drifted further
+            # off-centerline than projection_distance_nm (0.3 NM), the
+            # ratio exceeds 1 and math.asin raises ValueError. Treating
+            # it as asin(1)=90° tells the plane to turn fully toward
+            # the runway, which is the desired correction anyway.
+            ratio = max(-1.0, min(1.0, aircraft_to_extension_proj / projection_distance_nm))
+            angle_diff = abs(math.degrees(math.asin(ratio)))
             candidate_heading_1 = (runway_heading - angle_diff) % 360
             candidate_heading_2 = (runway_heading + angle_diff) % 360
 
