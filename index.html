@@ -1171,9 +1171,19 @@ function perfNow() {
 // visible cadence stays even as long as a step takes < TICK_MS.
 let _renderT0 = 0;
 let _renderFrame = 0;
+// Set while a restart / airport-switch is replacing the sim. The render loop
+// must not step or draw during this window, and any /step that was already in
+// flight when it began must be discarded — otherwise the ~1s-stale pre-restart
+// aircraft flash on screen for a frame before the fresh (empty) state lands.
+let _restarting = false;
 
 async function scheduleTick() {
   if (_renderT0 === 0) _renderT0 = perfNow();
+  // A restart owns the display right now — don't step or draw; retry shortly.
+  if (_restarting) {
+    setTimeout(scheduleTick, 60);
+    return;
+  }
   // While AUTO is loading (policy + worker pool warming up) the sim must not
   // advance — only refresh the view.
   const freeze = paused || autoLoading;
@@ -1182,6 +1192,12 @@ async function scheduleTick() {
     state = freeze ? await engine.state() : await engine.step();
   } catch (e) {
     setTimeout(scheduleTick, TICK_MS);   // transient hiccup — retry next grid
+    return;
+  }
+  if (_restarting) {
+    // A restart began while this fetch was in flight — drop its (now stale)
+    // result so the old aircraft don't flash before the fresh state lands.
+    setTimeout(scheduleTick, 60);
     return;
   }
   _renderFrame++;
@@ -1195,6 +1211,7 @@ async function scheduleTick() {
     target = now;
   }
   setTimeout(() => {
+    if (_restarting) { scheduleTick(); return; }   // re-check at draw time
     lastState = state;
     draw(state);
     updateHud(state);
@@ -1258,21 +1275,31 @@ async function applyRestart(opts) {
   // Shared by the airport dropdown and the Restart button. Wipes stats /
   // aircraft and re-syncs AUTO state from the backend (the backend turns AUTO
   // off when switching away from SIMULATED).
-  const newState = await engine.restart(opts || {});
-  lastState = newState;
-  staticData = newState.static;
-  spawnRate = newState.spawn_rate;   // restart resets the rate server-side (90s default)
-  resizeCanvas(staticData.radar_side);
-  fitRadar();
-  if (airportSelect) airportSelect.value = newState.airport_name || 'test';
-  if (backendAvailable) {
-    try { const a = await engine.getAuto(); autoOn = !!a.on; } catch (e) { autoOn = false; }
-  } else {
-    autoOn = false;
+  // Take ownership of the display so the render loop doesn't draw a stale
+  // pre-restart /step on top of the fresh state (the "aircraft briefly reappear"
+  // flicker).
+  _restarting = true;
+  try {
+    const newState = await engine.restart(opts || {});
+    lastState = newState;
+    staticData = newState.static;
+    spawnRate = newState.spawn_rate;   // restart resets the rate server-side (90s default)
+    resizeCanvas(staticData.radar_side);
+    fitRadar();
+    if (airportSelect) airportSelect.value = newState.airport_name || 'test';
+    if (backendAvailable) {
+      try { const a = await engine.getAuto(); autoOn = !!a.on; } catch (e) { autoOn = false; }
+    } else {
+      autoOn = false;
+    }
+    clearScript();
+    _renderT0 = 0;        // resync the render grid to the restart instant
+    _renderFrame = 0;
+    draw(newState);
+    updateHud(newState);
+  } finally {
+    _restarting = false;
   }
-  clearScript();
-  draw(newState);
-  updateHud(newState);
 }
 
 airportSelect.addEventListener('change', async () => {
