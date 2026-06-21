@@ -1144,6 +1144,7 @@ async function init() {
   window.addEventListener('resize', fitRadar);
   lastState = state;
   spawnRate = state.spawn_rate;
+  fastForward = state.fast_forward;   // sync client-owned speed from the server
   if (airportSelect) airportSelect.value = state.airport_name || 'test';
   if (backendAvailable) {
     try { const a = await engine.getAuto(); autoOn = !!a.on; } catch (e) { autoOn = false; }
@@ -1171,11 +1172,15 @@ function perfNow() {
 // visible cadence stays even as long as a step takes < TICK_MS.
 let _renderT0 = 0;
 let _renderFrame = 0;
-// Set while a restart / airport-switch is replacing the sim. The render loop
-// must not step or draw during this window, and any /step that was already in
-// flight when it began must be discarded — otherwise the ~1s-stale pre-restart
-// aircraft flash on screen for a frame before the fresh (empty) state lands.
+// Set while a restart / airport-switch is replacing the sim — the render loop
+// must not start a new step/draw during this window.
 let _restarting = false;
+// Bumped on every restart/airport-switch. Each render tick stamps itself with
+// the epoch at fetch time; if the epoch changed by the time it would draw, the
+// frame is from before the restart and is discarded. A boolean flag alone
+// misses a fetch that resolves just AFTER the restart finishes (its draw was
+// already queued for the next grid boundary) — that's the leftover flicker.
+let _renderEpoch = 0;
 
 async function scheduleTick() {
   if (_renderT0 === 0) _renderT0 = perfNow();
@@ -1184,6 +1189,7 @@ async function scheduleTick() {
     setTimeout(scheduleTick, 60);
     return;
   }
+  const epoch = _renderEpoch;   // stamp this tick
   // While AUTO is loading (policy + worker pool warming up) the sim must not
   // advance — only refresh the view.
   const freeze = paused || autoLoading;
@@ -1194,9 +1200,9 @@ async function scheduleTick() {
     setTimeout(scheduleTick, TICK_MS);   // transient hiccup — retry next grid
     return;
   }
-  if (_restarting) {
-    // A restart began while this fetch was in flight — drop its (now stale)
-    // result so the old aircraft don't flash before the fresh state lands.
+  if (epoch !== _renderEpoch || _restarting) {
+    // A restart happened since this fetch started — drop its (now stale) result
+    // so the old aircraft don't flash before the fresh state lands.
     setTimeout(scheduleTick, 60);
     return;
   }
@@ -1211,7 +1217,8 @@ async function scheduleTick() {
     target = now;
   }
   setTimeout(() => {
-    if (_restarting) { scheduleTick(); return; }   // re-check at draw time
+    // Re-check at draw time: a restart may have landed during the grid wait.
+    if (epoch !== _renderEpoch || _restarting) { scheduleTick(); return; }
     lastState = state;
     draw(state);
     updateHud(state);
@@ -1277,13 +1284,16 @@ async function applyRestart(opts) {
   // off when switching away from SIMULATED).
   // Take ownership of the display so the render loop doesn't draw a stale
   // pre-restart /step on top of the fresh state (the "aircraft briefly reappear"
-  // flicker).
+  // flicker). Bumping the epoch invalidates any fetch already in flight even if
+  // it resolves after _restarting is cleared.
   _restarting = true;
+  _renderEpoch++;
   try {
     const newState = await engine.restart(opts || {});
     lastState = newState;
     staticData = newState.static;
-    spawnRate = newState.spawn_rate;   // restart resets the rate server-side (90s default)
+    spawnRate = newState.spawn_rate;       // restart resets the rate server-side (90s default)
+    fastForward = newState.fast_forward;   // restart resets speed to 1x server-side
     resizeCanvas(staticData.radar_side);
     fitRadar();
     if (airportSelect) airportSelect.value = newState.airport_name || 'test';
