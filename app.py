@@ -15,6 +15,11 @@ app = Flask(__name__)
 RADAR_SIDE = 800
 sim = None
 
+# AUTO planner (Flask-backend only — cannot run in the Pyodide build). The
+# planner + torch are imported lazily so the base sim never pays for them.
+_auto_planner = None
+auto_on = False
+
 
 def init_simulation(airport="test", star_mode=True):
     global sim
@@ -23,6 +28,36 @@ def init_simulation(airport="test", star_mode=True):
         airport_name=airport,
         star_mode=star_mode,
     )
+
+
+def _is_simulated():
+    # The SIMULATED airport (STAR-following) maps to the 'test' data; AUTO and
+    # the strict 2 NM rule are SIMULATED-only.
+    return sim is not None and sim.airport_name == "test"
+
+
+def _get_planner():
+    global _auto_planner
+    if _auto_planner is None:
+        from auto_plan import get_planner
+        _auto_planner = get_planner(airport="test", runway="27", plan_steps=400)
+    return _auto_planner
+
+
+def _auto_status():
+    st = {"on": auto_on, "available": _is_simulated()}
+    if _auto_planner is not None:
+        st.update(_auto_planner.status())
+        st["on"] = auto_on
+    return st
+
+
+def _state_payload():
+    """sim state + AUTO overlay (planning flag, flight-plan lines) when on."""
+    s = sim.get_state()
+    if auto_on and _is_simulated() and _auto_planner is not None:
+        s.update(_auto_planner.overlay())
+    return s
 
 
 @app.route('/')
@@ -42,15 +77,20 @@ def environment_files(filename):
 
 @app.route('/state', methods=['GET'])
 def state():
-    return jsonify(sim.get_state())
+    return jsonify(_state_payload())
 
 
 @app.route('/step', methods=['POST'])
 def step():
-    n = sim.fast_forward
-    for _ in range(n):
-        sim.step(1.0)
-    return jsonify(sim.get_state())
+    if auto_on and _is_simulated() and _auto_planner is not None:
+        # The planner runs its own fast_forward loop and HOLDS the sim while a
+        # background replan is in flight (never blocks this request).
+        if not sim.crash_occurred:
+            _auto_planner.step(sim)
+    else:
+        for _ in range(sim.fast_forward):
+            sim.step(1.0)
+    return jsonify(_state_payload())
 
 
 @app.route('/command', methods=['POST'])
@@ -80,7 +120,7 @@ def speed():
 @app.route('/spawn_rate', methods=['POST'])
 def spawn_rate():
     data = request.get_json(force=True) or {}
-    rate = int(data.get('rate', 60))
+    rate = int(data.get('rate', 90))
     sim.set_spawn_rate(rate)
     return jsonify({"ok": True, "spawn_rate": sim.spawn_rate})
 
@@ -95,13 +135,44 @@ def spawn_directions():
 
 @app.route('/restart', methods=['POST'])
 def restart():
+    global auto_on
     data = request.get_json(force=True) or {}
     sim.restart(
         spawn_single=data.get('spawn_single'),
         star_mode=data.get('star_mode'),
         airport_name=data.get('airport_name'),
     )
-    return jsonify(sim.get_state())
+    # The old aircraft are gone. If AUTO stays on (still SIMULATED) re-init the
+    # planner for the fresh sim; otherwise clear it and turn AUTO off.
+    if not _is_simulated():
+        auto_on = False
+    if _auto_planner is not None:
+        if auto_on and _is_simulated():
+            _auto_planner.enable(sim)
+        else:
+            _auto_planner.reset(sim)
+    return jsonify(_state_payload())
+
+
+@app.route('/auto', methods=['GET', 'POST'])
+def auto():
+    global auto_on
+    if request.method == 'GET':
+        return jsonify(_auto_status())
+    data = request.get_json(force=True) or {}
+    want = bool(data.get('on'))
+    if want:
+        if not _is_simulated():
+            return jsonify({"ok": False, "on": False,
+                            "message": "AUTO is only available for the SIMULATED airport"}), 400
+        _get_planner().start()      # one-time policy load + pool warmup
+        _auto_planner.enable(sim)   # clear stale state; arming starts next step
+        auto_on = True
+    else:
+        auto_on = False
+        if _auto_planner is not None:
+            _auto_planner.disable(sim)   # restore physics, leave planes cleared to land
+    return jsonify({"ok": True, **_auto_status()})
 
 
 @app.route('/recording/start', methods=['POST'])

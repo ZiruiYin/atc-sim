@@ -2,10 +2,16 @@ import math
 from environment.utils import *
 
 class CollisionMonitor:
-    def __init__(self, screen_width, screen_height, nm_per_pixel):
+    def __init__(self, screen_width, screen_height, nm_per_pixel,
+                 strict_separation=False):
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.nm_per_pixel = nm_per_pixel
+        # SIMULATED-airport rule: 2 NM lateral / 1000 ft vertical, same-medium
+        # gated, LOC/ILS status ignored. Default (EGLL & legacy) keeps the old
+        # vertical-only, ILS-exempt rule.
+        self.strict_separation = strict_separation
+        self.strict_lateral_nm = 2.0
 
         self.min_separation_pixel = 3 / self.nm_per_pixel
         self.grid_width = self.min_separation_pixel / math.sqrt(2)
@@ -78,15 +84,26 @@ class CollisionMonitor:
 
     def _check_aircraft_pair(self, aircraft1, aircraft2):
         vertical_separation = abs(aircraft1.altitude - aircraft2.altitude)
-        
-        collision_warning = False
-        
-        if vertical_separation < 1000 and not aircraft1.ils_runway and not aircraft2.ils_runway and not aircraft1.on_ground and not aircraft2.on_ground:
-            collision_warning = True
 
-        if aircraft1.on_ground and aircraft2.on_ground and aircraft1.on_ground == aircraft2.on_ground:
-            collision_warning = True
-        
+        collision_warning = False
+
+        if self.strict_separation:
+            # SIMULATED rule: same medium (both airborne or both on the
+            # ground) AND lateral < 2 NM AND vertical < 1000 ft. LOC/ILS
+            # status is ignored.
+            same_medium = bool(aircraft1.on_ground) == bool(aircraft2.on_ground)
+            if same_medium and vertical_separation < 1000:
+                lateral_nm = self.nm_per_pixel * distance_between_coords_pixels(
+                    aircraft1.x, aircraft1.y, aircraft2.x, aircraft2.y)
+                if lateral_nm < self.strict_lateral_nm:
+                    collision_warning = True
+        else:
+            if vertical_separation < 1000 and not aircraft1.ils_runway and not aircraft2.ils_runway and not aircraft1.on_ground and not aircraft2.on_ground:
+                collision_warning = True
+
+            if aircraft1.on_ground and aircraft2.on_ground and aircraft1.on_ground == aircraft2.on_ground:
+                collision_warning = True
+
         if collision_warning:
             aircraft1.collision_warning = True
             aircraft2.collision_warning = True

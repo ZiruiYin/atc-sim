@@ -291,12 +291,69 @@
   button:hover { background: #444; }
   button.active { background: #ffeb3b; color: #000; }
   #pauseBtn.active { background: #29b6f6; color: #000; }
+  #restartBtn {
+    background: #7a1f1f;
+    color: #ffdede;
+    border-color: #b33;
+    font-weight: bold;
+  }
+  #restartBtn:hover { background: #a02828; }
+  #airportSection select {
+    width: 100%;
+    box-sizing: border-box;
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 6px 8px;
+    font: 13px monospace;
+    cursor: pointer;
+    outline: none;
+  }
+  #airportSection select:focus { border-color: #4caf50; }
+  #autoBtn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: #14406e;
+    color: #d6ecff;
+    border: 1px solid #2f6fb3;
+    padding: 6px 14px;
+    font: bold 14px monospace;
+    cursor: pointer;
+    letter-spacing: 1px;
+    z-index: 5;
+    display: none;
+  }
+  #autoBtn:hover { background: #1b5394; }
+  #autoBtn.active {
+    background: #2f6fb3;
+    color: #fff;
+    box-shadow: 0 0 8px rgba(47, 111, 179, 0.8);
+  }
+  #autoBtn:disabled { opacity: 0.6; cursor: default; }
+  #planningIndicator {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    color: #ffb84d;
+    font-size: 16px;
+    font-weight: bold;
+    pointer-events: none;
+    display: none;
+  }
 </style>
 </head>
 <body>
 <div id="app">
   <div id="main">
     <div id="leftPanel">
+      <div id="airportSection" class="panel-section">
+        <h4>Airport</h4>
+        <select id="airportSelect">
+          <option value="test" selected>SIMULATED</option>
+          <option value="egll">EGLL</option>
+        </select>
+      </div>
       <div id="scriptSection" class="panel-section">
         <h4>Script</h4>
         <div id="scriptList"></div>
@@ -305,6 +362,8 @@
     <div id="radarArea">
       <div id="radarWrap">
         <canvas id="radar" width="800" height="800"></canvas>
+        <button id="autoBtn" title="Autonomous multi-aircraft planner (SIMULATED only)">AUTO</button>
+        <div id="planningIndicator">PLANNING…</div>
         <div id="ffIndicator"></div>
         <div id="pausedIndicator">PAUSED</div>
         <div id="crashOverlay"></div>
@@ -371,8 +430,7 @@
     <input id="cmd" type="text" placeholder="CALLSIGN COMMAND (e.g. DL123 C 270)  --  Esc to release focus, click radar/strip to select" autocomplete="off" />
     <button id="speedBtn" title="TAB to toggle">Speed: 1x</button>
     <button id="pauseBtn" title="P to toggle">Pause</button>
-    <button id="singleBtn" title="Restart sim in single-aircraft mode">Single: off</button>
-    <button id="recordBtn" title="Start/stop CSV recording; CSV downloads on stop">Record</button>
+    <button id="restartBtn" title="Clear all stats and start over">Restart</button>
   </div>
 </div>
 
@@ -382,8 +440,6 @@ const ctx = canvas.getContext('2d');
 const cmdInput = document.getElementById('cmd');
 const speedBtn = document.getElementById('speedBtn');
 const pauseBtn = document.getElementById('pauseBtn');
-const singleBtn = document.getElementById('singleBtn');
-const recordBtn = document.getElementById('recordBtn');
 const ffIndicator = document.getElementById('ffIndicator');
 const pausedIndicator = document.getElementById('pausedIndicator');
 const hudScore = document.getElementById('hudScore');
@@ -391,6 +447,19 @@ const hudSpawnRate = document.getElementById('hudSpawnRate');
 const crashOverlay = document.getElementById('crashOverlay');
 const bootOverlay = document.getElementById('bootOverlay');
 const stripsEl = document.getElementById('strips');
+const airportSelect = document.getElementById('airportSelect');
+const autoBtn = document.getElementById('autoBtn');
+const restartBtn = document.getElementById('restartBtn');
+const planningIndicator = document.getElementById('planningIndicator');
+
+// AUTO planner is Flask-backend only (torch can't run in Pyodide). Tracked
+// here so the button only shows when a backend is present AND the SIMULATED
+// airport is active.
+let backendAvailable = false;
+let autoOn = false;
+// True while the AUTO policy/pool is loading — the sim must not advance until
+// it's ready (the /auto POST blocks for a few seconds during warmup).
+let autoLoading = false;
 
 function showBootMessage(msg) {
   if (!msg) { hideBootMessage(); return; }
@@ -404,6 +473,7 @@ function hideBootMessage() {
 let staticData = null;
 let lastState = null;
 let fastForward = 1;
+let spawnRate = 90;   // client-owned (like fastForward) so the +/- buttons feel instant
 let paused = false;
 let ctrlHeld = false;
 
@@ -478,6 +548,9 @@ class HttpEngine {
   restart(opts)              { return postJson('/restart', opts || {}); }
   startRecording()           { return postJson('/recording/start', {}); }
   stopRecording()            { return postJson('/recording/stop', {}); }
+  getAuto()                  { return getJson('/auto'); }
+  setAuto(on)                { return postJson('/auto', {on}); }
+  get hasAuto()              { return true; }
 }
 
 const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js';
@@ -606,6 +679,10 @@ class PyodideEngine {
   }
   async startRecording()           { return this._call('start_recording'); }
   async stopRecording()            { return this._call('stop_recording'); }
+  // AUTO is backend-only — not available in the in-browser (Pyodide) build.
+  async getAuto()                  { return {on: false, available: false}; }
+  async setAuto(_on)               { return {ok: false, on: false, available: false}; }
+  get hasAuto()                    { return false; }
 }
 
 async function selectEngine() {
@@ -928,7 +1005,36 @@ function draw(state) {
   drawNdbs();
   drawStars();
   drawWaypoints();
+  drawFlightPlanOverlay(state);
   drawAircraft(state);
+}
+
+// AUTO flight-plan overlay: light-blue polyline of each plane's remaining
+// planned path (red if the pair is in an unresolved conflict). Drawn under the
+// aircraft markers. The server sends only the remaining tail of each plan.
+function drawFlightPlanOverlay(state) {
+  if (!state || !state.flight_plans) return;
+  const conflictCs = new Set();
+  if (state.plan_conflicts) {
+    for (const c of state.plan_conflicts) { conflictCs.add(c.a); conflictCs.add(c.b); }
+  }
+  ctx.save();
+  for (const cs of Object.keys(state.flight_plans)) {
+    const plan = state.flight_plans[cs];
+    if (!plan.states || plan.states.length < 2) continue;
+    if (conflictCs.has(cs)) {
+      ctx.strokeStyle = 'rgba(255, 80, 80, 0.75)';
+      ctx.lineWidth = 1.4;
+    } else {
+      ctx.strokeStyle = 'rgba(140, 200, 255, 0.6)';
+      ctx.lineWidth = 1.0;
+    }
+    ctx.beginPath();
+    ctx.moveTo(plan.states[0].x, plan.states[0].y);
+    for (let i = 1; i < plan.states.length; i++) ctx.lineTo(plan.states[i].x, plan.states[i].y);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function renderStrips(state) {
@@ -956,9 +1062,13 @@ function updateHud(state) {
     `Landed: ${state.scoring.num_landed}  ` +
     `Violation: ${state.scoring.violation_seconds}s  ` +
     `Exits: ${state.scoring.improper_exits}`;
-  hudSpawnRate.textContent = `${state.spawn_rate}s`;
+  // Client-owned (see spawnRate): don't render the ~1s-stale state value, which
+  // would lag/flicker the readout right after a +/- click.
+  hudSpawnRate.textContent = `${spawnRate}s`;
 
-  fastForward = state.fast_forward;
+  // `fastForward` is client-owned (set by setSpeed). Don't overwrite it from
+  // `state.fast_forward`: drawn frames are ~1s stale under the fixed-grid loop,
+  // so a state fetched just before a speed change would flicker the value back.
   speedBtn.textContent = `Speed: ${fastForward}x`;
   speedBtn.classList.toggle('active', fastForward !== 1);
   ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
@@ -966,14 +1076,6 @@ function updateHud(state) {
   pausedIndicator.style.display = paused ? 'block' : 'none';
   pauseBtn.textContent = paused ? 'Resume' : 'Pause';
   pauseBtn.classList.toggle('active', paused);
-
-  const single = !!state.spawn_single;
-  singleBtn.textContent = `Single: ${single ? 'on' : 'off'}`;
-  singleBtn.classList.toggle('active', single);
-
-  const recording = !!state.recording;
-  recordBtn.textContent = recording ? 'Stop & Save' : 'Record';
-  recordBtn.classList.toggle('active', recording);
 
   if (state.crash.occurred) {
     crashOverlay.style.display = 'flex';
@@ -984,18 +1086,30 @@ function updateHud(state) {
 
   refreshDirButtons(state.spawn_directions, state.star_mode);
   renderStrips(state);
+  updateAutoUi(state);
 }
 
-function downloadCsv(text, filename) {
-  const blob = new Blob([text], {type: 'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename || 'recording.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+function updateAutoUi(state) {
+  // AUTO is shown only with a backend (torch can't run in Pyodide) and only
+  // for the SIMULATED airport.
+  const isSimulated = !!state && state.airport_name === 'test';
+  autoBtn.style.display = (backendAvailable && isSimulated) ? 'block' : 'none';
+  autoBtn.classList.toggle('active', autoOn);
+  if (!autoBtn.disabled) autoBtn.textContent = autoOn ? 'AUTO ON' : 'AUTO';
+  // PLANNING… overlay (top-left) while the backend runs a replan (sim is held).
+  const planning = autoOn && !!state && !!state.planning;
+  planningIndicator.style.display = planning ? 'block' : 'none';
+  if (planning) ffIndicator.textContent = '';
+  // While the planner is driving, manual command entry is disabled.
+  cmdInput.disabled = autoOn;
+  cmdInput.placeholder = autoOn
+    ? 'AUTO engaged — the planner is controlling all aircraft'
+    : 'CALLSIGN COMMAND (e.g. DL123 C 270)  --  Esc to release focus, click radar/strip to select';
+}
+
+function clearScript() {
+  const el = document.getElementById('scriptList');
+  if (el) el.innerHTML = '';
 }
 
 function refreshToggleButtons() {
@@ -1022,26 +1136,80 @@ async function init() {
   } else {
     await engine.init();
   }
+  backendAvailable = !!(engine && engine.hasAuto);
   const state = await engine.state();
   staticData = state.static;
   resizeCanvas(staticData.radar_side);
   fitRadar();
   window.addEventListener('resize', fitRadar);
   lastState = state;
+  spawnRate = state.spawn_rate;
+  if (airportSelect) airportSelect.value = state.airport_name || 'test';
+  if (backendAvailable) {
+    try { const a = await engine.getAuto(); autoOn = !!a.on; } catch (e) { autoOn = false; }
+  }
   refreshToggleButtons();
   draw(state);
   updateHud(state);
-  setInterval(tick, 1000);
+  scheduleTick();
 }
 
-async function tick() {
-  const state = paused ? await engine.state() : await engine.step();
-  lastState = state;
-  draw(state);
-  updateHud(state);
+const TICK_MS = 1000;
+
+function perfNow() {
+  return (typeof performance !== 'undefined' && performance.now)
+    ? performance.now() : Date.now();
+}
+
+// Render loop on a FIXED display grid.
+//
+// We fetch the next state (variable latency — HTTP jitter, or a slow Pyodide
+// step), but DRAW it at the next 1-second grid boundary rather than the instant
+// the request returns. Drawing at fetch-completion time (what setInterval/await
+// effectively did) means any jitter in step latency shows up as an uneven
+// "fast-then-wait" rhythm. Pinning draws to the grid absorbs that jitter, so the
+// visible cadence stays even as long as a step takes < TICK_MS.
+let _renderT0 = 0;
+let _renderFrame = 0;
+
+async function scheduleTick() {
+  if (_renderT0 === 0) _renderT0 = perfNow();
+  // While AUTO is loading (policy + worker pool warming up) the sim must not
+  // advance — only refresh the view.
+  const freeze = paused || autoLoading;
+  let state;
+  try {
+    state = freeze ? await engine.state() : await engine.step();
+  } catch (e) {
+    setTimeout(scheduleTick, TICK_MS);   // transient hiccup — retry next grid
+    return;
+  }
+  _renderFrame++;
+  const now = perfNow();
+  let target = _renderT0 + _renderFrame * TICK_MS;
+  if (now - target > TICK_MS) {
+    // Fell behind (slow engine, or a backgrounded tab paused our timers) —
+    // resync the grid so we don't fire a burst of catch-up frames.
+    _renderT0 = now;
+    _renderFrame = 0;
+    target = now;
+  }
+  setTimeout(() => {
+    lastState = state;
+    draw(state);
+    updateHud(state);
+    scheduleTick();   // start fetching the next state immediately
+  }, Math.max(0, target - now));
 }
 
 async function setSpeed(multiplier) {
+  // Optimistic: reflect the intent immediately so the toggle feels instant and
+  // never fights a stale drawn frame. Reconcile with the server's value (it
+  // clamps to 1/10) when the request returns.
+  fastForward = multiplier;
+  speedBtn.textContent = `Speed: ${fastForward}x`;
+  speedBtn.classList.toggle('active', fastForward !== 1);
+  ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
   const r = await engine.setSpeed(multiplier);
   fastForward = r.fast_forward;
   speedBtn.textContent = `Speed: ${fastForward}x`;
@@ -1050,11 +1218,15 @@ async function setSpeed(multiplier) {
 }
 
 async function bumpSpawnRate(delta) {
-  if (!lastState) return;
-  const cur = lastState.spawn_rate;
-  const next = Math.max(20, cur + delta);
-  if (next === cur) return;
-  await engine.setSpawnRate(next);
+  const next = Math.max(20, spawnRate + delta);
+  if (next === spawnRate) return;
+  spawnRate = next;                              // optimistic — instant readout
+  hudSpawnRate.textContent = `${spawnRate}s`;
+  const r = await engine.setSpawnRate(next);     // reconcile with server (it clamps)
+  if (r && typeof r.spawn_rate === 'number') {
+    spawnRate = r.spawn_rate;
+    hudSpawnRate.textContent = `${spawnRate}s`;
+  }
 }
 
 async function toggleSpawnDir(dir) {
@@ -1082,40 +1254,71 @@ pauseBtn.addEventListener('click', () => {
   ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
 });
 
-singleBtn.addEventListener('click', async () => {
-  if (!lastState) return;
-  if (singleBtn.disabled) return;
-  singleBtn.disabled = true;
+async function applyRestart(opts) {
+  // Shared by the airport dropdown and the Restart button. Wipes stats /
+  // aircraft and re-syncs AUTO state from the backend (the backend turns AUTO
+  // off when switching away from SIMULATED).
+  const newState = await engine.restart(opts || {});
+  lastState = newState;
+  staticData = newState.static;
+  spawnRate = newState.spawn_rate;   // restart resets the rate server-side (90s default)
+  resizeCanvas(staticData.radar_side);
+  fitRadar();
+  if (airportSelect) airportSelect.value = newState.airport_name || 'test';
+  if (backendAvailable) {
+    try { const a = await engine.getAuto(); autoOn = !!a.on; } catch (e) { autoOn = false; }
+  } else {
+    autoOn = false;
+  }
+  clearScript();
+  draw(newState);
+  updateHud(newState);
+}
+
+airportSelect.addEventListener('change', async () => {
+  if (airportSelect.disabled) return;
+  airportSelect.disabled = true;
   try {
-    const wantSingle = !lastState.spawn_single;
-    const newState = await engine.restart({spawn_single: wantSingle});
-    lastState = newState;
-    staticData = newState.static;
-    draw(newState);
-    updateHud(newState);
+    const airport = airportSelect.value;
+    await applyRestart({airport_name: airport, star_mode: airport === 'test'});
   } finally {
-    singleBtn.disabled = false;
+    airportSelect.disabled = false;
   }
 });
 
-recordBtn.addEventListener('click', async () => {
-  if (!lastState) return;
-  if (recordBtn.disabled) return;
-  recordBtn.disabled = true;
+restartBtn.addEventListener('click', async () => {
+  if (!lastState || restartBtn.disabled) return;
+  restartBtn.disabled = true;
   try {
-    if (lastState.recording) {
-      const r = await engine.stopRecording();
-      if (r && r.ok && r.csv) {
-        downloadCsv(r.csv, r.filename || 'recording.csv');
-      }
-    } else {
-      await engine.startRecording();
-    }
-    const s = await engine.state();
-    lastState = s;
-    updateHud(s);
+    await applyRestart({});   // keep current airport, clear everything
   } finally {
-    recordBtn.disabled = false;
+    restartBtn.disabled = false;
+  }
+});
+
+autoBtn.addEventListener('click', async () => {
+  if (autoBtn.disabled) return;
+  autoBtn.disabled = true;
+  const turningOn = !autoOn;
+  if (turningOn) {
+    autoBtn.textContent = 'AUTO …';   // warmup can take a few seconds
+    autoLoading = true;               // freeze the sim until the pool is ready
+  }
+  try {
+    const r = await engine.setAuto(turningOn);
+    if (r && r.ok) {
+      autoOn = !!r.on;
+    } else {
+      autoOn = false;
+      if (r && r.message) appendScript('invalid', `AUTO: ${r.message}`);
+    }
+  } catch (e) {
+    autoOn = false;
+    appendScript('invalid', `AUTO error: ${e}`);
+  } finally {
+    autoLoading = false;
+    autoBtn.disabled = false;
+    if (lastState) updateHud(lastState);
   }
 });
 

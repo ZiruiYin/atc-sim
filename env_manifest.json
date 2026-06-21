@@ -6,6 +6,8 @@
   "environment/core/collision_monitor.py",
   "environment/core/human_data_logger.py",
   "environment/core/simulation.py",
+  "environment/data/egll.json",
+  "environment/data/egll_navigation.json",
   "environment/data/test.json",
   "environment/data/test_navigation.json",
   "environment/display/__init__.py",

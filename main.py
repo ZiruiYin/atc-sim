@@ -8,7 +8,8 @@ def main():
     parser.add_argument(
         '--airport',
         default='test',
-        help='Airport ICAO (default: test). EGLL is legacy and not deployed.',
+        help='Airport to load (default: test = SIMULATED, STAR-following). '
+             'Use egll for the EGLL airport (direction-based spawning).',
     )
     parser.add_argument(
         '--free_mode',
