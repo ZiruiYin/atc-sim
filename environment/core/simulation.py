@@ -4,7 +4,7 @@ from environment.core.collision_monitor import CollisionMonitor
 
 
 class SimulationEnv:
-    def __init__(self, radar_side=800, nm_range=60, airport_name="test", spawn_rate=60,
+    def __init__(self, radar_side=800, nm_range=60, airport_name="test", spawn_rate=90,
                  spawn_directions=None, spawn_single=False, star_mode=False, recorder=None):
         self.radar_side = radar_side
         self.airport_name = airport_name.lower()
@@ -25,7 +25,11 @@ class SimulationEnv:
                                       spawn_single=self.spawn_single,
                                       star_mode=self.star_mode,
                                       procedures=self.data.get('star_procedures', {}))
-        self.collision_monitor = CollisionMonitor(radar_side, radar_side, self.nm_per_pixel)
+        # SIMULATED airport ('test') uses the strict 2 NM same-medium rule;
+        # EGLL and any other airport keep the legacy vertical-only rule.
+        self.collision_monitor = CollisionMonitor(
+            radar_side, radar_side, self.nm_per_pixel,
+            strict_separation=(self.airport_name == "test"))
 
         self.aircraft_list = {}
 

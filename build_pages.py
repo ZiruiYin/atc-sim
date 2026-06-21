@@ -9,8 +9,10 @@ Run after adding/removing/renaming files in environment/:
 
     python build_pages.py
 
-Then commit env_manifest.json. EGLL data is excluded from the deployment list
-(legacy reference only; only the 'test' airport ships).
+Then commit env_manifest.json. Both the SIMULATED ('test') and EGLL airports
+ship. Only files under environment/ are listed — the AUTO planner (auto_plan/,
+incl. best.pt + torch) is backend-only and intentionally absent from the
+Pyodide build.
 """
 
 import json
@@ -24,9 +26,9 @@ NOJEKYLL = ROOT / '.nojekyll'
 
 EXCLUDE_DIRS = {'__pycache__'}
 INCLUDE_EXTS = {'.py', '.json'}
-# EGLL data is kept in the repo as legacy reference but excluded from the
-# Pages deployment — only the 'test' airport ships.
-EXCLUDE_FILE_PREFIXES = ('egll',)
+# Both airports ship now (SIMULATED + EGLL); nothing under environment/ is
+# excluded by name.
+EXCLUDE_FILE_PREFIXES = ()
 
 
 def collect_env_files():

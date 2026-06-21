@@ -1,1 +1,11 @@
+# Core simulator (Flask backend + local play). The GitHub Pages deployment
+# runs the sim in-browser via Pyodide and needs NONE of these.
 flask>=2.0
+
+# --- AUTO planner (backend-only) ---------------------------------------------
+# Required only to run the AUTO autopilot (auto_plan/). Not needed for human
+# play, and cannot run in the Pyodide build. Install with:
+#   pip install -r requirements.txt
+# (torch is a large download; skip this section if you don't need AUTO.)
+numpy>=1.24
+torch>=2.1
