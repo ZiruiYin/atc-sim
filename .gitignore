@@ -56,3 +56,4 @@ _internal/
 CLAUDE.md
 doc/
 human_data/
+.env
