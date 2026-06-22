@@ -132,13 +132,34 @@
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(255, 0, 0, 0.45);
     display: none;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 22px;
+    color: #fff;
+    pointer-events: none;   /* let clicks fall through except on the buttons */
+  }
+  #crashMsg {
     font-size: 24px;
     font-weight: bold;
-    color: #fff;
-    pointer-events: none;
+    text-align: center;
+    padding: 0 16px;
   }
+  #crashBtns {
+    display: flex;
+    gap: 14px;
+    pointer-events: auto;   /* re-enable clicks on the buttons themselves */
+  }
+  #crashBtns button {
+    padding: 10px 22px;
+    font: bold 15px monospace;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+  #crashRestartBtn { background: #1d4a2a; color: #d6f0db; border: 1px solid #2f7a43; }
+  #crashRestartBtn:hover { background: #266237; }
+  #crashExitBtn { background: #3a2a14; color: #ffd9a8; border: 1px solid #7a5a2a; }
+  #crashExitBtn:hover { background: #5a3f1c; }
   #bootOverlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -561,7 +582,13 @@
         <div id="planningIndicator">PLANNING…</div>
         <div id="ffIndicator"></div>
         <div id="pausedIndicator">PAUSED</div>
-        <div id="crashOverlay"></div>
+        <div id="crashOverlay">
+          <div id="crashMsg"></div>
+          <div id="crashBtns">
+            <button id="crashRestartBtn">Restart</button>
+            <button id="crashExitBtn">Exit</button>
+          </div>
+        </div>
         <div id="bootOverlay" style="display:none;"></div>
       </div>
     </div>
@@ -640,6 +667,7 @@ const pausedIndicator = document.getElementById('pausedIndicator');
 const hudScore = document.getElementById('hudScore');
 const hudSpawnRate = document.getElementById('hudSpawnRate');
 const crashOverlay = document.getElementById('crashOverlay');
+const crashMsg = document.getElementById('crashMsg');
 const bootOverlay = document.getElementById('bootOverlay');
 const stripsEl = document.getElementById('strips');
 const airportSelect = document.getElementById('airportSelect');
@@ -1283,7 +1311,7 @@ function updateHud(state) {
 
   if (state.crash.occurred) {
     crashOverlay.style.display = 'flex';
-    crashOverlay.textContent = state.crash.message;
+    crashMsg.textContent = state.crash.message;
   } else {
     crashOverlay.style.display = 'none';
   }
@@ -1589,8 +1617,19 @@ restartBtn.addEventListener('click', async () => {
 
 autoBtn.addEventListener('click', async () => {
   if (autoBtn.disabled) return;
-  autoBtn.disabled = true;
   const turningOn = !autoOn;
+  if (turningOn && !_autoUsedThisSession) {
+    // AUTO hands the traffic to the autopilot, so the run is no longer the
+    // player's own — warn once that it forfeits leaderboard saving for the
+    // session before letting them engage it.
+    const ok = window.confirm(
+      'Enable AUTO?\n\n' +
+      'AUTO lets the autopilot fly all the traffic. Because the run is no ' +
+      'longer flown by you, scores can no longer be saved to the leaderboard ' +
+      'for the rest of this session.');
+    if (!ok) return;   // leave AUTO off; button untouched
+  }
+  autoBtn.disabled = true;
   if (turningOn) {
     autoBtn.textContent = 'AUTO …';   // warmup can take a few seconds
     autoLoading = true;               // freeze the sim until the pool is ready
@@ -1599,6 +1638,7 @@ autoBtn.addEventListener('click', async () => {
     const r = await engine.setAuto(turningOn);
     if (r && r.ok) {
       autoOn = !!r.on;
+      if (autoOn) _autoUsedThisSession = true;   // disables saving this session
     } else {
       autoOn = false;
       if (r && r.message) appendScript('invalid', `AUTO: ${r.message}`);
@@ -1775,6 +1815,7 @@ let _bootPromise = null;    // engine boot, started in the background
 let _enteredBefore = false; // first entry rides init()'s fresh sim; later restart
 let _runConcluded = false;  // true once we've offered to save the current run
 let _prevCrash = false;     // edge-detect the crash transition
+let _autoUsedThisSession = false;  // AUTO engaged at least once -> no saving this session
 
 // Landing / modal DOM.
 const landingEl   = document.getElementById('landing');
@@ -1846,7 +1887,7 @@ saveModalEl.addEventListener('click', (e) => { if (e.target === saveModalEl) ans
 // already concluded. Fires at most once per run (via _runConcluded).
 async function maybeSaveRun(airportValue) {
   if (_runConcluded) return;
-  if (!TraconAPI.enabled() || !TraconAPI.currentUser() || !runHasProgress()) {
+  if (!TraconAPI.enabled() || !TraconAPI.currentUser() || !runHasProgress() || _autoUsedThisSession) {
     _runConcluded = true;
     return;
   }
@@ -1913,6 +1954,10 @@ async function exitSimulator() {
   refreshLeaderboard();
 }
 exitBtn.addEventListener('click', exitSimulator);
+
+// Crash-overlay buttons reuse the toolbar Restart / Exit (same save handling).
+document.getElementById('crashRestartBtn').addEventListener('click', () => restartBtn.click());
+document.getElementById('crashExitBtn').addEventListener('click', () => exitBtn.click());
 
 // --- auth UI ---
 function setAuthMsg(msg, cls) {
