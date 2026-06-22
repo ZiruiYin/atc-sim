@@ -10,7 +10,7 @@ pinned: false
 
 # ATC Simulator — User Manual
 
-A browser-based approach controller simulator. You vector inbound traffic onto the ILS and land them. Default airport is called SIMULATOR (a simulator airport named TEST). EGLL (London Heathrow) is also available but with no STAR implemented yet.
+A browser-based approach controller simulator. You vector inbound traffic onto the ILS and land them. Default airport is called SIMULATOR (a simulator airport named TEST) with Standard Terminal Arrival Routes (STARs) for runway 27. EGLL (London Heathrow) is also available but with no STAR implemented yet.
 
 ## Run
 
@@ -216,7 +216,7 @@ If two aircraft are within **0.2 nm lateral and 50 ft vertical or less** at the 
 
 ## AUTO
 
-On the **SIMULATED** airport you can hand all traffic to an autonomous controller with the **AUTO** button on the radar. AUTO needs PyTorch, so it runs only on the backend deployments (the [Hugging Face Space](https://huggingface.co/spaces/JerryYin14/ATC-SIM) or a local `python main.py`) — not the in-browser GitHub Pages build. Engaging AUTO means the run is no longer flown by you, so it forfeits leaderboard saving for the rest of the session.
+On the **SIMULATED** airport you can hand all traffic to an autonomous controller with the **AUTO** button on the radar. AUTO needs PyTorch, so it runs only on the [backend deployments](https://huggingface.co/spaces/JerryYin14/ATC-SIM) or a local `python main.py`. Engaging AUTO means the run is no longer flown by you, so it forfeits leaderboard saving for the rest of the session. It will attempt to auto-land all aircrafts on runway 27.
 
 How it works:
 
