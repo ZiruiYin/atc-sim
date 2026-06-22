@@ -10,8 +10,8 @@
 // ---------------------------------------------------------------------------
 window.TRACON_CONFIG = {
   // From Supabase → Project Settings → API.
-  SUPABASE_URL: '',        // e.g. 'https://abcdefgh.supabase.co'
-  SUPABASE_ANON_KEY: '',   // the "anon public" key
+  SUPABASE_URL: 'https://gxcpozynkqrxecmjpqbl.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_iCjZ7zcJ9TI4zvr_hsZ3jQ_t9PRA0o4',   // publishable (browser-safe) key
 
   // Usernames are mapped to synthetic emails for Supabase Auth (we never store
   // passwords ourselves — GoTrue hashes them). The domain only needs to be a
