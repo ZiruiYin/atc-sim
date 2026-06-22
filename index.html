@@ -1412,6 +1412,11 @@ async function scheduleTick() {
     setTimeout(scheduleTick, 60);
     return;
   }
+  // Stamp the epoch BEFORE the grid wait. If a restart or speed toggle bumps it
+  // while we're waiting for the boundary, the callback below sees the mismatch
+  // and bails — otherwise this already-scheduled frame would fire at the old
+  // speed right before setSpeed's fresh redraw, giving two quick frames.
+  const epoch = _renderEpoch;
   // Find the next grid boundary and WAIT for it; only then advance + draw. We
   // deliberately do NOT pre-fetch the next state ahead of the boundary: a step
   // advances the sim irreversibly, so a step taken speculatively before a speed
@@ -1429,9 +1434,9 @@ async function scheduleTick() {
     target = now;
   }
   setTimeout(async () => {
-    // Re-check after the grid wait: a restart/speed change may have landed.
-    if (_restarting || _repacing) { scheduleTick(); return; }
-    const epoch = _renderEpoch;   // stamp this tick at advance time
+    // Bail if anything changed while we waited (toggle/restart bumped the epoch
+    // or raised a flag) — don't step at a now-stale speed.
+    if (epoch !== _renderEpoch || _restarting || _repacing) { scheduleTick(); return; }
     // While AUTO is loading (policy + worker pool warming up) the sim must not
     // advance — only refresh the view.
     const freeze = paused || autoLoading;
