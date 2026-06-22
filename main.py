@@ -21,7 +21,10 @@ def main():
 
     args = parser.parse_args()
     init_simulation(airport=args.airport, star_mode=not args.free_mode)
-    app.run(host=args.host, port=args.port, debug=False)
+    # threaded so a /state poll isn't blocked while a /step (or a background
+    # AUTO replan) is in flight — matters when the Hugging Face Space serves a
+    # couple of tabs at once.
+    app.run(host=args.host, port=args.port, debug=False, threaded=True)
 
 
 if __name__ == '__main__':
