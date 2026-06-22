@@ -250,6 +250,11 @@ class SimulationEnv:
                 "num_landed": self.num_landed,
                 "improper_exits": self.improper_exits,
                 "violation_seconds": round(self.violation_seconds, 2),
+                # Simulator seconds elapsed in this run (resets on restart). The
+                # frontend records this as the run's "play time" for the
+                # leaderboard — it's sim-clock time, not wall-clock, so a 10x
+                # session and a 1x session are scored on the same footing.
+                "sim_time": round(self.sim_time, 1),
             },
             "crash": {
                 "occurred": self.crash_occurred,

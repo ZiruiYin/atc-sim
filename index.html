@@ -341,18 +341,213 @@
     pointer-events: none;
     display: none;
   }
+
+  /* ---- Landing page (accounts + leaderboard) ---------------------------- */
+  #landing {
+    height: 100vh;
+    width: 100vw;
+    overflow-y: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 50% 0%, #14241a 0%, #101410 60%, #0c0c0c 100%);
+  }
+  #landingInner {
+    width: 420px;
+    max-width: 92vw;
+    padding: 48px 0 60px 0;
+  }
+  #landingTitle {
+    text-align: center;
+    font-size: 30px;
+    letter-spacing: 6px;
+    font-weight: bold;
+    color: #5bbf6e;
+    margin: 0 0 4px 0;
+    text-shadow: 0 0 12px rgba(91, 191, 110, 0.45);
+  }
+  #landingTag {
+    text-align: center;
+    color: #6a8a72;
+    font-size: 12px;
+    letter-spacing: 2px;
+    margin: 0 0 28px 0;
+  }
+  .landing-card {
+    background: #161a16;
+    border: 1px solid #2c3a2e;
+    border-radius: 6px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  .landing-card h2 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: #8fae96;
+    font-weight: normal;
+    text-transform: uppercase;
+  }
+  #authBox input {
+    width: 100%;
+    box-sizing: border-box;
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 9px 10px;
+    font: 14px monospace;
+    outline: none;
+    margin-bottom: 10px;
+  }
+  #authBox input:focus { border-color: #4caf50; }
+  #authButtons { display: flex; gap: 10px; }
+  #authButtons button { flex: 1; padding: 9px 8px; font: 13px monospace; }
+  #loginBtn {
+    background: #1d4a2a; color: #d6f0db; border-color: #2f7a43; font-weight: bold;
+  }
+  #loginBtn:hover { background: #266237; }
+  #guestBtn { background: #333; color: #ddd; }
+  #authMsg {
+    min-height: 16px; font-size: 12px; margin-bottom: 8px; line-height: 1.4;
+  }
+  #authMsg.err { color: #ff8a80; }
+  #authMsg.ok  { color: #9ce0a8; }
+  #authUserRow {
+    font-size: 12px; color: #9cc7a6; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #authUserRow button { padding: 3px 8px; font-size: 11px; }
+  #boardHead {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  #boardHead h2 { margin: 0; }
+  #boardAirport {
+    background: #2a2a2a; color: #fff; border: 1px solid #555;
+    padding: 4px 8px; font: 12px monospace; cursor: pointer; outline: none;
+  }
+  #boardAirport:focus { border-color: #4caf50; }
+  #boardTable { width: 100%; border-collapse: collapse; font: 12px monospace; }
+  #boardTable th {
+    text-align: right; color: #6a8a72; font-weight: normal; padding: 4px 6px;
+    border-bottom: 1px solid #2c3a2e;
+  }
+  #boardTable th:nth-child(2) { text-align: left; }
+  #boardTable td {
+    text-align: right; padding: 5px 6px; color: #cfe0d3;
+    border-bottom: 1px solid #1d231e;
+  }
+  #boardTable td:nth-child(2) { text-align: left; color: #fff; }
+  #boardTable tr.me td { color: #ffe082; }
+  #boardTable tr.me td:nth-child(2) { color: #ffe082; }
+  #boardBody:empty { display: none; }
+  #boardNote { color: #6a8a72; font-size: 12px; font-style: italic; padding: 8px 2px 0; }
+
+  /* ---- EXIT button (sim page, top-left of the airport selector) --------- */
+  #airportTop { display: flex; gap: 8px; align-items: stretch; }
+  #airportTop select { flex: 1; width: auto; min-width: 0; }
+  #exitBtn {
+    flex-shrink: 0;
+    background: #3a2a14; color: #ffd9a8; border: 1px solid #7a5a2a;
+    font-weight: bold; letter-spacing: 1px; padding: 6px 12px;
+  }
+  #exitBtn:hover { background: #5a3f1c; }
+
+  /* ---- "Save this run?" modal ------------------------------------------ */
+  #saveModal {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0, 0, 0, 0.72);
+    display: none; align-items: center; justify-content: center;
+  }
+  #saveDialog {
+    background: #161a16; border: 1px solid #2f7a43; border-radius: 6px;
+    padding: 22px 24px; width: 320px; max-width: 90vw; text-align: center;
+  }
+  #saveDialog h3 {
+    margin: 0 0 12px 0; color: #8fae96; font-size: 15px; letter-spacing: 1px;
+  }
+  #saveStats {
+    font: 12px monospace; color: #cfe0d3; margin-bottom: 16px; line-height: 1.7;
+  }
+  #saveStats b { color: #fff; }
+  #saveBtns { display: flex; gap: 10px; }
+  #saveBtns button { flex: 1; padding: 9px; }
+  #saveYes { background: #1d4a2a; color: #d6f0db; border-color: #2f7a43; font-weight: bold; }
+  #saveYes:hover { background: #266237; }
+  #saveYes:disabled { opacity: 0.6; cursor: default; }
 </style>
+<!-- Accounts + leaderboard (Supabase). Pure browser<->Supabase, so this works
+     on BOTH the GitHub Pages (Pyodide) build and the Hugging Face (Flask) one.
+     No-ops gracefully to guest-only play until web/config.js is filled in. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="web/config.js"></script>
+<script src="web/supabaseClient.js"></script>
+<script src="web/api.js"></script>
 </head>
 <body>
-<div id="app">
+
+<!-- ============================ PAGE 1: LANDING ========================== -->
+<div id="landing">
+  <div id="landingInner">
+    <h1 id="landingTitle">TRACON SIMULATOR</h1>
+    <div id="landingTag">APPROACH CONTROL</div>
+
+    <div class="landing-card" id="authBox">
+      <div id="authUserRow" style="display:none;">
+        Signed in as <b id="authWho"></b>
+        <button id="logoutBtn">Log out</button>
+      </div>
+      <input id="authUser" placeholder="User Name" autocomplete="username" maxlength="20" />
+      <input id="authPass" type="password" placeholder="Password" autocomplete="current-password" maxlength="72" />
+      <div id="authMsg"></div>
+      <div id="authButtons">
+        <button id="loginBtn">Log in / Sign Up</button>
+        <button id="guestBtn">Continue as a Guest</button>
+      </div>
+    </div>
+
+    <div class="landing-card" id="boardBox">
+      <div id="boardHead">
+        <h2>Leaderboard</h2>
+        <select id="boardAirport"></select>
+      </div>
+      <table id="boardTable">
+        <thead><tr>
+          <th>#</th><th>Player</th><th>Landed</th><th>Viol&nbsp;s</th><th>Exits</th><th>Time</th>
+        </tr></thead>
+        <tbody id="boardBody"></tbody>
+      </table>
+      <div id="boardNote"></div>
+    </div>
+  </div>
+</div>
+
+<!-- "Save this run?" confirmation (logged-in players only) -->
+<div id="saveModal">
+  <div id="saveDialog">
+    <h3>Save this run?</h3>
+    <div id="saveStats"></div>
+    <div id="saveBtns">
+      <button id="saveYes">Yes, save</button>
+      <button id="saveNo">No</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ PAGE 2: SIMULATOR ======================== -->
+<div id="app" style="display:none;">
   <div id="main">
     <div id="leftPanel">
       <div id="airportSection" class="panel-section">
         <h4>Airport</h4>
-        <select id="airportSelect">
-          <option value="test" selected>SIMULATED</option>
-          <option value="egll">EGLL</option>
-        </select>
+        <div id="airportTop">
+          <button id="exitBtn" title="Leave to the title screen (offers to save your run)">EXIT</button>
+          <select id="airportSelect">
+            <option value="test" selected>SIMULATED</option>
+            <option value="egll">EGLL</option>
+          </select>
+        </div>
       </div>
       <div id="scriptSection" class="panel-section">
         <h4>Script</h4>
@@ -1061,7 +1256,8 @@ function updateHud(state) {
   hudScore.textContent =
     `Landed: ${state.scoring.num_landed}  ` +
     `Violation: ${state.scoring.violation_seconds}s  ` +
-    `Exits: ${state.scoring.improper_exits}`;
+    `Exits: ${state.scoring.improper_exits}  ` +
+    `Time: ${fmtTime(state.scoring.sim_time)}`;
   // Client-owned (see spawnRate): don't render the ~1s-stale state value, which
   // would lag/flicker the readout right after a +/- click.
   hudSpawnRate.textContent = `${spawnRate}s`;
@@ -1087,6 +1283,14 @@ function updateHud(state) {
   refreshDirButtons(state.spawn_directions, state.star_mode);
   renderStrips(state);
   updateAutoUi(state);
+
+  // The sim terminates on a crash — offer to save the run once (logged-in only;
+  // maybeSaveRun no-ops for guests / empty runs). Edge-detected so it fires a
+  // single time, not every tick the crash overlay is up.
+  if (state.crash && state.crash.occurred && !_prevCrash) {
+    _prevCrash = true;
+    maybeSaveRun(runningAirportValue());
+  }
 }
 
 function updateAutoUi(state) {
@@ -1183,6 +1387,13 @@ let _restarting = false;
 let _renderEpoch = 0;
 
 async function scheduleTick() {
+  // Idle cheaply while on the landing page — the engine may already be booted
+  // (we warm it in the background), but the sim must not advance until the
+  // player actually enters.
+  if (!inSim) {
+    setTimeout(scheduleTick, 200);
+    return;
+  }
   if (_renderT0 === 0) _renderT0 = perfNow();
   // A restart owns the display right now — don't step or draw; retry shortly.
   if (_restarting) {
@@ -1307,6 +1518,9 @@ async function applyRestart(opts) {
     _renderFrame = 0;
     draw(newState);
     updateHud(newState);
+    // Fresh run begins: re-arm the save offer and crash edge-detector.
+    _runConcluded = false;
+    _prevCrash = false;
   } finally {
     _restarting = false;
   }
@@ -1316,6 +1530,9 @@ airportSelect.addEventListener('change', async () => {
   if (airportSelect.disabled) return;
   airportSelect.disabled = true;
   try {
+    // Switching airports ends the current run — offer to save it under the
+    // airport it was actually flown on (lastState still holds the old sim).
+    await maybeSaveRun(runningAirportValue());
     const airport = airportSelect.value;
     await applyRestart({airport_name: airport, star_mode: airport === 'test'});
   } finally {
@@ -1327,6 +1544,7 @@ restartBtn.addEventListener('click', async () => {
   if (!lastState || restartBtn.disabled) return;
   restartBtn.disabled = true;
   try {
+    await maybeSaveRun(runningAirportValue());   // offer to save before wiping
     await applyRestart({});   // keep current airport, clear everything
   } finally {
     restartBtn.disabled = false;
@@ -1506,7 +1724,268 @@ canvas.addEventListener('click', (e) => {
   }
 });
 
-init();
+// ======================================================================
+// Accounts, landing page, leaderboard, and the save-run flow.
+//
+// All Supabase access goes through window.TraconAPI (web/api.js); this block
+// is just UI + glue, so it works identically on the Pyodide (GitHub Pages) and
+// Flask (Hugging Face) builds. The simulator engine is warmed in the
+// background while the landing page is up, so entering is instant.
+// ======================================================================
+
+// Run-lifecycle state (also read by updateHud / scheduleTick / the handlers).
+let inSim = false;          // false while the landing page is showing
+let _bootPromise = null;    // engine boot, started in the background
+let _enteredBefore = false; // first entry rides init()'s fresh sim; later restart
+let _runConcluded = false;  // true once we've offered to save the current run
+let _prevCrash = false;     // edge-detect the crash transition
+
+// Landing / modal DOM.
+const landingEl   = document.getElementById('landing');
+const appEl       = document.getElementById('app');
+const authUserEl  = document.getElementById('authUser');
+const authPassEl  = document.getElementById('authPass');
+const authMsgEl   = document.getElementById('authMsg');
+const loginBtn    = document.getElementById('loginBtn');
+const guestBtn    = document.getElementById('guestBtn');
+const logoutBtn   = document.getElementById('logoutBtn');
+const authUserRow = document.getElementById('authUserRow');
+const authWhoEl   = document.getElementById('authWho');
+const boardAirportEl = document.getElementById('boardAirport');
+const boardBodyEl = document.getElementById('boardBody');
+const boardNoteEl = document.getElementById('boardNote');
+const exitBtn     = document.getElementById('exitBtn');
+const saveModalEl = document.getElementById('saveModal');
+const saveStatsEl = document.getElementById('saveStats');
+const saveYesBtn  = document.getElementById('saveYes');
+const saveNoBtn   = document.getElementById('saveNo');
+
+function fmtTime(secs) {
+  secs = Math.max(0, Math.round(secs || 0));
+  const m = Math.floor(secs / 60), s = secs % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// Airport ('test'/'egll') of the run that produced the current stats. Prefer
+// the running sim's airport (lastState) over the dropdown so that switching
+// airports saves the ending run under the OLD airport.
+function runningAirportValue() {
+  return (lastState && lastState.airport_name) ||
+         (airportSelect && airportSelect.value) || 'test';
+}
+
+function currentRunStats() {
+  const s = (lastState && lastState.scoring) || {};
+  return {
+    landed: s.num_landed || 0,
+    violation_secs: s.violation_seconds || 0,
+    exits: s.improper_exits || 0,
+    play_secs: s.sim_time || 0,
+  };
+}
+
+function runHasProgress() {
+  const st = currentRunStats();
+  return st.play_secs > 0 || st.landed > 0 || st.exits > 0 || st.violation_secs > 0;
+}
+
+// --- "Save this run?" modal (Promise<boolean>) ---
+let _saveResolve = null;
+function askSaveRun(stats, airportValue) {
+  saveStatsEl.innerHTML =
+    `${TraconAPI.airportLabel(airportValue)}<br>` +
+    `Landed <b>${stats.landed}</b> &nbsp; Violation <b>${Math.round(stats.violation_secs)}s</b><br>` +
+    `Exits <b>${stats.exits}</b> &nbsp; Time <b>${fmtTime(stats.play_secs)}</b>`;
+  saveYesBtn.disabled = false;
+  saveNoBtn.disabled = false;
+  saveModalEl.style.display = 'flex';
+  return new Promise(res => { _saveResolve = res; });
+}
+function answerSave(v) { const r = _saveResolve; _saveResolve = null; if (r) r(v); }
+saveNoBtn.addEventListener('click', () => answerSave(false));
+saveYesBtn.addEventListener('click', () => answerSave(true));
+saveModalEl.addEventListener('click', (e) => { if (e.target === saveModalEl) answerSave(false); });
+
+// Offer to save the just-ended run. No-op for guests, empty runs, or a run we
+// already concluded. Fires at most once per run (via _runConcluded).
+async function maybeSaveRun(airportValue) {
+  if (_runConcluded) return;
+  if (!TraconAPI.enabled() || !TraconAPI.currentUser() || !runHasProgress()) {
+    _runConcluded = true;
+    return;
+  }
+  const stats = currentRunStats();
+  const yes = await askSaveRun(stats, airportValue);
+  _runConcluded = true;
+  if (!yes) { saveModalEl.style.display = 'none'; return; }
+  saveYesBtn.disabled = true;
+  saveNoBtn.disabled = true;
+  saveStatsEl.innerHTML = 'Saving…';
+  const res = await TraconAPI.saveRun(airportValue, stats);
+  saveModalEl.style.display = 'none';
+  if (!res.ok) alert('Could not save run: ' + (res.message || 'unknown error'));
+}
+
+// --- engine boot (background) ---
+function startEngineBoot() {
+  if (!_bootPromise) {
+    _bootPromise = init().catch(err => { _bootPromise = null; throw err; });
+  }
+  return _bootPromise;
+}
+
+// --- enter / exit the simulator ---
+async function enterSimulator() {
+  loginBtn.disabled = true;
+  guestBtn.disabled = true;
+  const prevLabel = loginBtn.textContent;
+  loginBtn.textContent = 'Loading…';
+  try {
+    await startEngineBoot();
+  } catch (e) {
+    loginBtn.disabled = false; guestBtn.disabled = false;
+    loginBtn.textContent = prevLabel;
+    setAuthMsg('Failed to load the simulator. Reload and try again.', 'err');
+    return;
+  }
+  loginBtn.disabled = false; guestBtn.disabled = false;
+  loginBtn.textContent = prevLabel;
+  // First entry uses the fresh sim init() built; later entries start a new run.
+  if (_enteredBefore) {
+    await applyRestart({});      // also re-arms _runConcluded / _prevCrash
+  } else {
+    _runConcluded = false;
+    _prevCrash = false;
+  }
+  _enteredBefore = true;
+  landingEl.style.display = 'none';
+  appEl.style.display = '';
+  inSim = true;
+  fitRadar();
+}
+
+async function exitSimulator() {
+  exitBtn.disabled = true;
+  try {
+    await maybeSaveRun(runningAirportValue());
+  } finally {
+    exitBtn.disabled = false;
+  }
+  inSim = false;
+  appEl.style.display = 'none';
+  landingEl.style.display = '';
+  refreshLeaderboard();
+}
+exitBtn.addEventListener('click', exitSimulator);
+
+// --- auth UI ---
+function setAuthMsg(msg, cls) {
+  authMsgEl.textContent = msg || '';
+  authMsgEl.className = cls || '';
+}
+function refreshAuthRow() {
+  const u = TraconAPI.currentUser();
+  if (u) {
+    authUserRow.style.display = 'flex';
+    authWhoEl.textContent = u.username;
+    loginBtn.textContent = `Play as ${u.username}`;
+  } else {
+    authUserRow.style.display = 'none';
+    loginBtn.textContent = 'Log in / Sign Up';
+  }
+}
+
+loginBtn.addEventListener('click', async () => {
+  const u = authUserEl.value.trim();
+  const p = authPassEl.value;
+  // Already signed in and no new credentials typed -> just play.
+  if (!u && !p && TraconAPI.currentUser()) { enterSimulator(); return; }
+  if (!TraconAPI.enabled()) {
+    setAuthMsg('Accounts are not configured on this deployment.', 'err');
+    return;
+  }
+  setAuthMsg('', '');
+  loginBtn.disabled = true; guestBtn.disabled = true;
+  const res = await TraconAPI.signInOrUp(u, p);
+  loginBtn.disabled = false; guestBtn.disabled = false;
+  if (!res.ok) { setAuthMsg(res.message, 'err'); refreshAuthRow(); return; }
+  refreshAuthRow();
+  authPassEl.value = '';
+  enterSimulator();
+});
+
+guestBtn.addEventListener('click', () => { setAuthMsg('', ''); enterSimulator(); });
+
+logoutBtn.addEventListener('click', async () => {
+  await TraconAPI.signOut();
+  refreshAuthRow();
+  setAuthMsg('Logged out.', 'ok');
+});
+
+authUserEl.addEventListener('keydown', e => { if (e.key === 'Enter') authPassEl.focus(); });
+authPassEl.addEventListener('keydown', e => { if (e.key === 'Enter') loginBtn.click(); });
+
+// --- leaderboard ---
+function buildAirportDropdown() {
+  boardAirportEl.innerHTML = '';
+  for (const a of TraconAPI.airports()) {
+    const opt = document.createElement('option');
+    opt.value = a.value;
+    opt.textContent = a.label;
+    boardAirportEl.appendChild(opt);
+  }
+}
+boardAirportEl.addEventListener('change', refreshLeaderboard);
+
+async function refreshLeaderboard() {
+  if (!TraconAPI.enabled()) {
+    boardBodyEl.innerHTML = '';
+    boardNoteEl.textContent = 'Leaderboard not configured on this deployment.';
+    return;
+  }
+  boardNoteEl.textContent = 'Loading…';
+  const airport = boardAirportEl.value || 'test';
+  const res = await TraconAPI.fetchLeaderboard(airport, 10);
+  if (!res.ok) {
+    boardBodyEl.innerHTML = '';
+    boardNoteEl.textContent = 'Could not load leaderboard.';
+    return;
+  }
+  const me = TraconAPI.currentUser();
+  boardBodyEl.innerHTML = '';
+  res.rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    if (me && r.username === me.username) tr.className = 'me';
+    tr.innerHTML =
+      `<td>${i + 1}</td><td></td>` +
+      `<td>${r.landed}</td><td>${Math.round(r.violation_secs)}</td>` +
+      `<td>${r.exits}</td><td>${fmtTime(r.play_secs)}</td>`;
+    tr.children[1].textContent = r.username;   // textContent: no HTML injection
+    boardBodyEl.appendChild(tr);
+  });
+  boardNoteEl.textContent = res.rows.length ? '' : 'No runs yet — be the first.';
+}
+
+// --- bootstrap ---
+async function bootstrap() {
+  buildAirportDropdown();
+  if (!TraconAPI.enabled()) {
+    // Guest-only: no Supabase configured. Hide the account inputs, keep guest
+    // play, and note it. (This is the state of the plain GitHub Pages build
+    // until web/config.js is filled in.)
+    authUserEl.style.display = 'none';
+    authPassEl.style.display = 'none';
+    loginBtn.style.display = 'none';
+    setAuthMsg('Accounts / leaderboard not configured — play as guest.', '');
+  } else {
+    try { await TraconAPI.init(); } catch (e) {}
+    refreshAuthRow();
+  }
+  refreshLeaderboard();
+  // Warm the simulator engine in the background so entering is instant.
+  startEngineBoot().catch(() => {});
+}
+bootstrap();
 </script>
 </body>
 </html>
