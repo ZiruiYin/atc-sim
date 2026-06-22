@@ -57,3 +57,17 @@ CLAUDE.md
 doc/
 human_data/
 .env
+
+# OS / OneDrive cruft
+Desktop.ini
+desktop.ini
+Thumbs.db
+ehthumbs.db
+$RECYCLE.BIN/
+.DS_Store
+
+# JetBrains IDE (.vscode/ already ignored above)
+.idea/
+
+# Sim CSV recordings (Record feature; none are tracked)
+*.csv
