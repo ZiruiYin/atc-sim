@@ -1412,23 +1412,12 @@ async function scheduleTick() {
     setTimeout(scheduleTick, 60);
     return;
   }
-  const epoch = _renderEpoch;   // stamp this tick
-  // While AUTO is loading (policy + worker pool warming up) the sim must not
-  // advance — only refresh the view.
-  const freeze = paused || autoLoading;
-  let state;
-  try {
-    state = freeze ? await engine.state() : await engine.step();
-  } catch (e) {
-    setTimeout(scheduleTick, TICK_MS);   // transient hiccup — retry next grid
-    return;
-  }
-  if (epoch !== _renderEpoch || _restarting || _repacing) {
-    // A restart or speed change happened since this fetch started — drop its
-    // (now stale) result so the old frame doesn't flash before the fresh state.
-    setTimeout(scheduleTick, 60);
-    return;
-  }
+  // Find the next grid boundary and WAIT for it; only then advance + draw. We
+  // deliberately do NOT pre-fetch the next state ahead of the boundary: a step
+  // advances the sim irreversibly, so a step taken speculatively before a speed
+  // toggle would bake in the old speed (e.g. a +10s jump that then shows right
+  // after you slow to 1x — you can't un-advance it). Stepping at the boundary
+  // reads whatever speed is in effect at that instant.
   _renderFrame++;
   const now = perfNow();
   let target = _renderT0 + _renderFrame * TICK_MS;
@@ -1439,13 +1428,29 @@ async function scheduleTick() {
     _renderFrame = 0;
     target = now;
   }
-  setTimeout(() => {
-    // Re-check at draw time: a restart or speed change may have landed.
-    if (epoch !== _renderEpoch || _restarting || _repacing) { scheduleTick(); return; }
+  setTimeout(async () => {
+    // Re-check after the grid wait: a restart/speed change may have landed.
+    if (_restarting || _repacing) { scheduleTick(); return; }
+    const epoch = _renderEpoch;   // stamp this tick at advance time
+    // While AUTO is loading (policy + worker pool warming up) the sim must not
+    // advance — only refresh the view.
+    const freeze = paused || autoLoading;
+    let state;
+    try {
+      state = freeze ? await engine.state() : await engine.step();
+    } catch (e) {
+      setTimeout(scheduleTick, TICK_MS);   // transient hiccup — retry next grid
+      return;
+    }
+    if (epoch !== _renderEpoch || _restarting || _repacing) {
+      // A restart/speed change landed mid-step — drop this (now stale) result.
+      scheduleTick();
+      return;
+    }
     lastState = state;
     draw(state);
     updateHud(state);
-    scheduleTick();   // start fetching the next state immediately
+    scheduleTick();   // schedule the next boundary
   }, Math.max(0, target - now));
 }
 
@@ -1457,10 +1462,9 @@ async function setSpeed(multiplier) {
   speedBtn.classList.toggle('active', fastForward !== 1);
   ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
 
-  // Freeze the loop and invalidate the buffered frame SYNCHRONOUSLY — before any
-  // await. Otherwise, during the /speed round-trip, the already-computed
-  // old-speed frame can still draw: a leftover +1s at 1x is invisible, but a
-  // leftover +10s at 10x is a glaring extra jump when slowing to 1x.
+  // Freeze the loop SYNCHRONOUSLY — before any await — so no step is issued at
+  // the OLD speed during the /speed round-trip. The epoch bump also drops any
+  // step that happens to be mid-flight at this instant.
   _repacing = true;
   _renderEpoch++;
   try {
