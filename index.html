@@ -1387,6 +1387,10 @@ let _renderFrame = 0;
 // Set while a restart / airport-switch is replacing the sim — the render loop
 // must not start a new step/draw during this window.
 let _restarting = false;
+// Set while a speed change is being applied — same idea: freeze the loop so a
+// buffered old-speed frame can't draw and no new step is taken until the server
+// has the new speed. Then we resync and redraw at the new speed immediately.
+let _repacing = false;
 // Bumped on every restart/airport-switch. Each render tick stamps itself with
 // the epoch at fetch time; if the epoch changed by the time it would draw, the
 // frame is from before the restart and is discarded. A boolean flag alone
@@ -1403,8 +1407,8 @@ async function scheduleTick() {
     return;
   }
   if (_renderT0 === 0) _renderT0 = perfNow();
-  // A restart owns the display right now — don't step or draw; retry shortly.
-  if (_restarting) {
+  // A restart or speed change owns the display right now — don't step or draw.
+  if (_restarting || _repacing) {
     setTimeout(scheduleTick, 60);
     return;
   }
@@ -1419,9 +1423,9 @@ async function scheduleTick() {
     setTimeout(scheduleTick, TICK_MS);   // transient hiccup — retry next grid
     return;
   }
-  if (epoch !== _renderEpoch || _restarting) {
-    // A restart happened since this fetch started — drop its (now stale) result
-    // so the old aircraft don't flash before the fresh state lands.
+  if (epoch !== _renderEpoch || _restarting || _repacing) {
+    // A restart or speed change happened since this fetch started — drop its
+    // (now stale) result so the old frame doesn't flash before the fresh state.
     setTimeout(scheduleTick, 60);
     return;
   }
@@ -1436,8 +1440,8 @@ async function scheduleTick() {
     target = now;
   }
   setTimeout(() => {
-    // Re-check at draw time: a restart may have landed during the grid wait.
-    if (epoch !== _renderEpoch || _restarting) { scheduleTick(); return; }
+    // Re-check at draw time: a restart or speed change may have landed.
+    if (epoch !== _renderEpoch || _restarting || _repacing) { scheduleTick(); return; }
     lastState = state;
     draw(state);
     updateHud(state);
@@ -1447,27 +1451,32 @@ async function scheduleTick() {
 
 async function setSpeed(multiplier) {
   // Optimistic: reflect the intent immediately so the toggle feels instant and
-  // never fights a stale drawn frame. Reconcile with the server's value (it
-  // clamps to 1/10) when the request returns.
+  // never fights a stale drawn frame.
   fastForward = multiplier;
   speedBtn.textContent = `Speed: ${fastForward}x`;
   speedBtn.classList.toggle('active', fastForward !== 1);
   ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
-  const r = await engine.setSpeed(multiplier);
-  fastForward = r.fast_forward;
-  speedBtn.textContent = `Speed: ${fastForward}x`;
-  speedBtn.classList.toggle('active', fastForward !== 1);
-  ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
 
-  // Make the new speed visible on the very next frame instead of ~1s later.
-  // The loop pre-fetches one frame ahead (computed with the OLD speed), so we:
-  //   - bump the epoch  -> that buffered old-speed frame is discarded, not drawn
-  //   - reset the grid  -> _renderFrame = -1 makes the next loop frame's target
-  //                        land at "now", so it redraws immediately at the new
-  //                        speed (same resync mechanism as applyRestart).
+  // Freeze the loop and invalidate the buffered frame SYNCHRONOUSLY — before any
+  // await. Otherwise, during the /speed round-trip, the already-computed
+  // old-speed frame can still draw: a leftover +1s at 1x is invisible, but a
+  // leftover +10s at 10x is a glaring extra jump when slowing to 1x.
+  _repacing = true;
   _renderEpoch++;
-  _renderT0 = 0;
-  _renderFrame = -1;
+  try {
+    const r = await engine.setSpeed(multiplier);   // server now has the new speed
+    fastForward = r.fast_forward;                  // reconcile (server clamps to 1/10)
+    speedBtn.textContent = `Speed: ${fastForward}x`;
+    speedBtn.classList.toggle('active', fastForward !== 1);
+    ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
+  } finally {
+    // Always resume, even if the request failed, so the loop never stays frozen.
+    // _renderFrame = -1 makes the next loop frame's target land at "now", so it
+    // fetches one fresh step at the new speed and redraws immediately.
+    _renderT0 = 0;
+    _renderFrame = -1;
+    _repacing = false;
+  }
 }
 
 async function bumpSpawnRate(delta) {
