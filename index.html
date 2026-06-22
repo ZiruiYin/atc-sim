@@ -1649,23 +1649,16 @@ restartBtn.addEventListener('click', async () => {
 autoBtn.addEventListener('click', async () => {
   if (autoBtn.disabled) return;
   const turningOn = !autoOn;
-  if (turningOn) {
-    if (TraconAPI.currentUser()) {
-      // Logged in: AUTO hands the traffic to the autopilot, so the run is no
-      // longer the player's own. Confirm (every time) that it forfeits saving.
-      const ok = await showModal(
-        'Enable AUTO?',
-        'AUTO lets the autopilot fly all the traffic. Scores can no longer be ' +
-        'saved to the leaderboard for the rest of this session.',
-        'Enable AUTO', 'Cancel');
-      if (!ok) return;   // leave AUTO off; button untouched
-    } else {
-      // Guest: nothing to forfeit (guests can't save anyway) — just inform.
-      await showModal(
-        'Guest mode',
-        'Note that you cannot save your score in guest mode.',
-        'OK', null);
-    }
+  // Logged-in players forfeit leaderboard saving by engaging AUTO — confirm it
+  // every time. Guests can't save anyway (they were told at guest entry), so
+  // they just proceed.
+  if (turningOn && TraconAPI.currentUser()) {
+    const ok = await showModal(
+      'Enable AUTO?',
+      'AUTO lets the autopilot fly all the traffic. Scores can no longer be ' +
+      'saved to the leaderboard for the rest of this session.',
+      'Enable AUTO', 'Cancel');
+    if (!ok) return;   // leave AUTO off; button untouched
   }
   autoBtn.disabled = true;
   if (turningOn) {
@@ -2046,10 +2039,11 @@ function refreshAuthRow() {
 }
 
 loginBtn.addEventListener('click', async () => {
+  // Already signed in -> the button is "Play as X" and the input boxes are
+  // hidden, so there are no new credentials to submit; just play.
+  if (TraconAPI.currentUser()) { enterSimulator(); return; }
   const u = authUserEl.value.trim();
   const p = authPassEl.value;
-  // Already signed in and no new credentials typed -> just play.
-  if (!u && !p && TraconAPI.currentUser()) { enterSimulator(); return; }
   if (!TraconAPI.enabled()) {
     setAuthMsg('Accounts are not configured on this deployment.', 'err');
     return;
@@ -2064,7 +2058,14 @@ loginBtn.addEventListener('click', async () => {
   enterSimulator();
 });
 
-guestBtn.addEventListener('click', () => { setAuthMsg('', ''); enterSimulator(); });
+guestBtn.addEventListener('click', async () => {
+  setAuthMsg('', '');
+  await showModal(
+    'Guest mode',
+    'Note that you cannot save your score in guest mode.',
+    'OK', null);
+  enterSimulator();
+});
 
 logoutBtn.addEventListener('click', async () => {
   await TraconAPI.signOut();
