@@ -71,7 +71,7 @@ When detailed tags are off (D), only the callsign is shown.
   - *Landed*: successful arrivals
   - *Violation*: cumulative seconds any aircraft has spent in a separation conflict
   - *Exits*: aircraft that left the radar boundary without landing
-  - *Time*: simulator seconds elapsed this run (sim-clock, not wall-clock — a 10× session and a 1× session are scored on the same footing). Recorded as your run's play time on the leaderboard.
+  - *Time*: simulator seconds elapsed this run (sim-clock, not wall-clock). Recorded as your run's play time on the leaderboard.
 - **Display toggles**: A, R, V, N, W, U, D — described below
 - **STAR toggles** (`1`–`6`): overlay published STAR procedures on the scope (NORTH1/2/3, SOUTH1/2/3). These belong to the **SIMULATED** airport, which spawns its traffic on STARs; EGLL has no STARs yet.
 - **Spawn directions** (N/E/S/W): which radar edges new aircraft come from — used on **EGLL**. Disabled on the SIMULATED airport, which spawns aircraft onto STARs instead.
