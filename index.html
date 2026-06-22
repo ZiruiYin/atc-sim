@@ -1618,16 +1618,20 @@ restartBtn.addEventListener('click', async () => {
 autoBtn.addEventListener('click', async () => {
   if (autoBtn.disabled) return;
   const turningOn = !autoOn;
-  if (turningOn && !_autoUsedThisSession) {
-    // AUTO hands the traffic to the autopilot, so the run is no longer the
-    // player's own — warn once that it forfeits leaderboard saving for the
-    // session before letting them engage it.
-    const ok = window.confirm(
-      'Enable AUTO?\n\n' +
-      'AUTO lets the autopilot fly all the traffic. ' +
-      'Scores can no longer be saved to the leaderboard ' +
-      'for the rest of this session.');
-    if (!ok) return;   // leave AUTO off; button untouched
+  if (turningOn) {
+    if (TraconAPI.currentUser()) {
+      // Logged in: AUTO hands the traffic to the autopilot, so the run is no
+      // longer the player's own. Confirm (every time) that it forfeits saving.
+      const ok = window.confirm(
+        'Enable AUTO?\n\n' +
+        'AUTO lets the autopilot fly all the traffic. ' +
+        'Scores can no longer be saved to the leaderboard ' +
+        'for the rest of this session.');
+      if (!ok) return;   // leave AUTO off; button untouched
+    } else {
+      // Guest: nothing to forfeit (guests can't save anyway) — just inform.
+      window.alert('Note that you cannot save your score in guest mode.');
+    }
   }
   autoBtn.disabled = true;
   if (turningOn) {
