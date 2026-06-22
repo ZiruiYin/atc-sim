@@ -1,3 +1,13 @@
+---
+title: TRACON Simulator
+emoji: 🛬
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # ATC Simulator — User Manual
 
 A browser-based approach controller simulator. You vector inbound traffic onto the ILS and land them. Default airport is `test` (a compact training airport); EGLL (London Heathrow) is kept in the repo as legacy reference but is not deployed.
