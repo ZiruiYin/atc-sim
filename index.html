@@ -901,7 +901,13 @@ async function selectEngine() {
 let engine = null;
 
 function isTyping() {
-  return document.activeElement === cmdInput;
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  // Any text field swallows keys — the command box AND the landing-page
+  // username/password inputs. Otherwise typing a name like "Raven" would fire
+  // the R/V/N display shortcuts.
+  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
 }
 
 function resizeCanvas(side) {
@@ -1663,7 +1669,7 @@ window.addEventListener('blur', () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (isTyping()) return;
+  if (!inSim || isTyping()) return;   // ignore shortcuts on the landing page
   const key = e.key;
   if (key === 'Tab') {
     e.preventDefault();
@@ -1885,14 +1891,15 @@ function setAuthMsg(msg, cls) {
 }
 function refreshAuthRow() {
   const u = TraconAPI.currentUser();
-  if (u) {
-    authUserRow.style.display = 'flex';
-    authWhoEl.textContent = u.username;
-    loginBtn.textContent = `Play as ${u.username}`;
-  } else {
-    authUserRow.style.display = 'none';
-    loginBtn.textContent = 'Log in / Sign Up';
-  }
+  const signedIn = !!u;
+  // Signed in -> only "Signed in as X / Log out" + "Play as X".
+  // Logged out -> username/password + "Log in / Sign Up" + "Continue as a Guest".
+  authUserRow.style.display = signedIn ? 'flex' : 'none';
+  authUserEl.style.display  = signedIn ? 'none' : '';
+  authPassEl.style.display  = signedIn ? 'none' : '';
+  guestBtn.style.display    = signedIn ? 'none' : '';
+  loginBtn.textContent = signedIn ? `Play as ${u.username}` : 'Log in / Sign Up';
+  if (signedIn) authWhoEl.textContent = u.username;
 }
 
 loginBtn.addEventListener('click', async () => {
@@ -1918,7 +1925,9 @@ guestBtn.addEventListener('click', () => { setAuthMsg('', ''); enterSimulator();
 
 logoutBtn.addEventListener('click', async () => {
   await TraconAPI.signOut();
-  refreshAuthRow();
+  authUserEl.value = '';
+  authPassEl.value = '';
+  refreshAuthRow();              // re-shows username/password + guest
   setAuthMsg('Logged out.', 'ok');
 });
 
