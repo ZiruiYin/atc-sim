@@ -75,6 +75,14 @@ def environment_files(filename):
     return send_from_directory(os.path.join(ROOT, 'environment'), filename)
 
 
+@app.route('/web/<path:filename>')
+def web_files(filename):
+    # Accounts/leaderboard client (config.js, supabaseClient.js, api.js). On
+    # GitHub Pages these are served statically; under Flask we must serve them
+    # explicitly, or the Supabase client never loads and login silently fails.
+    return send_from_directory(os.path.join(ROOT, 'web'), filename)
+
+
 @app.route('/state', methods=['GET'])
 def state():
     return jsonify(_state_payload())
