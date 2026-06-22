@@ -10,13 +10,12 @@ pinned: false
 
 # ATC Simulator — User Manual
 
-A browser-based approach controller simulator. You vector inbound traffic onto the ILS and land them. Default airport is `test` (a compact training airport); EGLL (London Heathrow) is kept in the repo as legacy reference but is not deployed.
-
-For internals and architecture, see `doc/architecture.md`, `doc/behavior.md`, and `doc/logger.md`.
+A browser-based approach controller simulator. You vector inbound traffic onto the ILS and land them. Default airport is called SIMULATOR (a simulator airport named TEST). EGLL (London Heathrow) is also available but with no STAR implemented yet.
 
 ## Run
 
 Play in the browser: <https://ziruiyin.github.io/atc-sim/>
+The Hugging Face deployment also has **AUTO** mode — a model that flies the aircraft for you (see the [AUTO](#auto) section): <https://huggingface.co/spaces/JerryYin14/ATC-SIM>
 
 Or run locally:
 
@@ -25,7 +24,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Then open <http://127.0.0.1:5000>.
+This is hosted locally on port 5000.
 
 ---
 
@@ -68,19 +67,20 @@ When detailed tags are off (D), only the callsign is shown.
 
 ### Right column — control panel
 
-- **Score row**: `Landed: N  Violation: Ns  Exits: N`
+- **Score row**: `Landed: N  Violation: Ns  Exits: N` with `Time: M:SS` on the next line
   - *Landed*: successful arrivals
   - *Violation*: cumulative seconds any aircraft has spent in a separation conflict
   - *Exits*: aircraft that left the radar boundary without landing
+  - *Time*: simulator seconds elapsed this run (sim-clock, not wall-clock — a 10× session and a 1× session are scored on the same footing). Recorded as your run's play time on the leaderboard.
 - **Display toggles**: A, R, V, N, W, U, D — described below
-- **STAR toggles** (`1`–`6`): overlay one or more published STAR procedures on the scope (NORTH1/2/3, SOUTH1/2/3 on EGLL)
-- **Spawn directions** (N/E/S/W): which radar edges new aircraft come from (disabled in `--star` mode)
+- **STAR toggles** (`1`–`6`): overlay published STAR procedures on the scope (NORTH1/2/3, SOUTH1/2/3). These belong to the **SIMULATED** airport, which spawns its traffic on STARs; EGLL has no STARs yet.
+- **Spawn directions** (N/E/S/W): which radar edges new aircraft come from — used on **EGLL**. Disabled on the SIMULATED airport, which spawns aircraft onto STARs instead.
 - **Spawn rate**: seconds between spawns; use `−` / `+` to make it faster/slower
 - **Flight strips**: one strip per active aircraft — click a strip to load that callsign into the command box
 
-### Left column — script log
+### Left column — airport selector + script log
 
-Live transcript of ATC and pilot radio calls, plus rejection messages:
+The top of the left column has the **airport selector** (SIMULATED / EGLL) and an **EXIT** button, which returns you to the title screen (offering to save your run first if you're logged in). Below it is a live transcript of ATC and pilot radio calls, plus rejection messages:
 
 - **ATC** lines (you / the controller)
 - **Pilot** readbacks
@@ -92,8 +92,7 @@ Live transcript of ATC and pilot radio calls, plus rejection messages:
 - **Command box**: type `CALLSIGN COMMAND` and press `Enter`. Press `Esc` to release focus. Clicking an aircraft on the radar, or a flight strip, pre-fills the callsign.
 - **Speed**: toggles 1× ⇄ 10× (also `Tab`). In 10×, the radar updates the same once-per-second cadence but the simulation advances 10 simulated seconds per update.
 - **Pause**: pauses the simulation (also `P`).
-- **Single**: toggles single-aircraft mode. Clicking **restarts the simulation** (wipes the current aircraft list and score) and spawns one aircraft at a time — the next plane only appears after the previous lands or exits the radar. Click again to restart in normal multi-aircraft mode. Button label shows `Single: on` / `Single: off`.
-- **Record**: starts CSV recording from the next simulated second. Click again to stop; the CSV file downloads automatically to your browser's downloads folder, named `YYYYMMDD_HHMMSS_{single|multiple}.csv`. The schema is the same as `doc/logger.md`.
+- **Restart**: clears all aircraft and the score and starts a fresh run on the current airport (offers to save your run first if you're logged in).
 
 ### Keyboard shortcuts
 
@@ -193,20 +192,39 @@ If you clear an aircraft early, the clearance stays active and capture happens o
 
 ## Separation rules
 
-You must keep aircraft apart. Two thresholds are enforced:
+You must keep aircraft apart. A red dot/tag marks a **separation warning**, and every second any aircraft spends in conflict adds to your *Violation* count. The two airports use **different** rules.
 
-### Separation warning (red tag, counts against score)
+### SIMULATED airport
 
-- **Less than 1000 ft vertical AND less than 3 nm lateral**, *or*
-- Two aircraft on the **same runway** (runway incursion)
+A warning is raised for any two aircraft in the **same medium** (both airborne, or both on the ground) that are within:
 
-Suppressed when either aircraft is established on the ILS, or when one is already on the ground after landing.
+- **less than 2 nm lateral** *and* **less than 1000 ft vertical**.
 
-### Crash (game over)
+### EGLL
 
-- **50 ft vertical or less AND 0.2 nm lateral or less** at the same time.
+A warning is raised when two airborne aircraft are within:
 
-The simulation stops; reload the page to start over.
+- **less than 3 nm lateral** *and* **less than 1000 ft vertical**,
+
+**unless** either aircraft is established on the ILS, or one is already on the ground after landing. Separately, two aircraft on the **same runway** raise a runway-incursion warning.
+
+### Crash
+
+If two aircraft are within **0.2 nm lateral and 50 ft vertical or less** at the same instant, they collide and the simulation stops. The crash overlay offers **Restart** and **Exit** buttons.
+
+---
+
+## AUTO
+
+On the **SIMULATED** airport you can hand all traffic to an autonomous controller with the **AUTO** button on the radar. AUTO needs PyTorch, so it runs only on the backend deployments (the [Hugging Face Space](https://huggingface.co/spaces/JerryYin14/ATC-SIM) or a local `python main.py`) — not the in-browser GitHub Pages build. Engaging AUTO means the run is no longer flown by you, so it forfeits leaderboard saving for the rest of the session.
+
+How it works:
+
+- **Policy** — a lightweight Gaussian Mixture Model with 6,752 parameters. It was first trained on past human play data, then refined with [Proximal Policy Optimization](https://arxiv.org/abs/1707.06347)).
+- **Planning** — a multi-aircraft planner rolls the policy forward, planning 400 steps ahead and resolving conflicts between aircraft before issuing commands each tick.
+- **Performance** — over a test of **512 rollouts**, AUTO lands aircraft with a success rate of **nearly 98%**, with low loss of separation and **no crashes**.
+
+The full training pipeline and algorithms are described [here](https://cs224r.stanford.edu/projects/pdfs/Jerry%20Yin%20submission_416287340/224R_Final_Project.pdf).
 
 ---
 
