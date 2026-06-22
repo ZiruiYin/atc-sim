@@ -1259,10 +1259,12 @@ function renderStrips(state) {
 }
 
 function updateHud(state) {
-  hudScore.textContent =
+  // Values are numeric (from sim state), so innerHTML is safe here. Time goes
+  // on its own line in the right-column readout.
+  hudScore.innerHTML =
     `Landed: ${state.scoring.num_landed}  ` +
     `Violation: ${state.scoring.violation_seconds}s  ` +
-    `Exits: ${state.scoring.improper_exits}  ` +
+    `Exits: ${state.scoring.improper_exits}<br>` +
     `Time: ${fmtTime(state.scoring.sim_time)}`;
   // Client-owned (see spawnRate): don't render the ~1s-stale state value, which
   // would lag/flicker the readout right after a +/- click.
