@@ -497,6 +497,25 @@
   #saveYes { background: #1d4a2a; color: #d6f0db; border-color: #2f7a43; font-weight: bold; }
   #saveYes:hover { background: #266237; }
   #saveYes:disabled { opacity: 0.6; cursor: default; }
+
+  /* ---- Generic styled confirm/info modal (AUTO prompt, etc.) ----------- */
+  #msgModal {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(0, 0, 0, 0.72);
+    display: none; align-items: center; justify-content: center;
+  }
+  #msgDialog {
+    background: #161a16; border: 1px solid #2f7a43; border-radius: 6px;
+    padding: 22px 24px; width: 360px; max-width: 90vw; text-align: center;
+  }
+  #msgDialog h3 {
+    margin: 0 0 12px 0; color: #8fae96; font-size: 15px; letter-spacing: 1px;
+  }
+  #msgBody { font: 13px monospace; color: #cfe0d3; margin-bottom: 18px; line-height: 1.6; }
+  #msgBtns { display: flex; gap: 10px; }
+  #msgBtns button { flex: 1; padding: 9px; }
+  #msgOk { background: #1d4a2a; color: #d6f0db; border-color: #2f7a43; font-weight: bold; }
+  #msgOk:hover { background: #266237; }
 </style>
 <!-- Accounts + leaderboard (Supabase). Pure browser<->Supabase, so this works
      on BOTH the GitHub Pages (Pyodide) build and the Hugging Face (Flask) one.
@@ -552,6 +571,18 @@
     <div id="saveBtns">
       <button id="saveYes">Yes, save</button>
       <button id="saveNo">No</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic confirm/info modal (AUTO prompt, etc.) -->
+<div id="msgModal">
+  <div id="msgDialog">
+    <h3 id="msgTitle"></h3>
+    <div id="msgBody"></div>
+    <div id="msgBtns">
+      <button id="msgOk">OK</button>
+      <button id="msgCancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -1622,15 +1653,18 @@ autoBtn.addEventListener('click', async () => {
     if (TraconAPI.currentUser()) {
       // Logged in: AUTO hands the traffic to the autopilot, so the run is no
       // longer the player's own. Confirm (every time) that it forfeits saving.
-      const ok = window.confirm(
-        'Enable AUTO?\n\n' +
-        'AUTO lets the autopilot fly all the traffic. ' +
-        'Scores can no longer be saved to the leaderboard ' +
-        'for the rest of this session.');
+      const ok = await showModal(
+        'Enable AUTO?',
+        'AUTO lets the autopilot fly all the traffic. Scores can no longer be ' +
+        'saved to the leaderboard for the rest of this session.',
+        'Enable AUTO', 'Cancel');
       if (!ok) return;   // leave AUTO off; button untouched
     } else {
       // Guest: nothing to forfeit (guests can't save anyway) — just inform.
-      window.alert('Note that you cannot save your score in guest mode.');
+      await showModal(
+        'Guest mode',
+        'Note that you cannot save your score in guest mode.',
+        'OK', null);
     }
   }
   autoBtn.disabled = true;
@@ -1886,6 +1920,36 @@ function answerSave(v) { const r = _saveResolve; _saveResolve = null; if (r) r(v
 saveNoBtn.addEventListener('click', () => answerSave(false));
 saveYesBtn.addEventListener('click', () => answerSave(true));
 saveModalEl.addEventListener('click', (e) => { if (e.target === saveModalEl) answerSave(false); });
+
+// --- Generic styled confirm/info modal (Promise<boolean>) ---
+// cancelLabel = null -> single-button info dialog (always resolves true).
+const msgModalEl = document.getElementById('msgModal');
+const msgTitleEl = document.getElementById('msgTitle');
+const msgBodyEl = document.getElementById('msgBody');
+const msgOkBtn = document.getElementById('msgOk');
+const msgCancelBtn = document.getElementById('msgCancel');
+let _msgResolve = null;
+function showModal(title, body, okLabel, cancelLabel) {
+  msgTitleEl.textContent = title;
+  msgBodyEl.textContent = body;
+  msgOkBtn.textContent = okLabel || 'OK';
+  if (cancelLabel) {
+    msgCancelBtn.textContent = cancelLabel;
+    msgCancelBtn.style.display = '';
+  } else {
+    msgCancelBtn.style.display = 'none';
+  }
+  msgModalEl.style.display = 'flex';
+  return new Promise(res => { _msgResolve = res; });
+}
+function answerMsg(v) {
+  msgModalEl.style.display = 'none';
+  const r = _msgResolve; _msgResolve = null;
+  if (r) r(v);
+}
+msgOkBtn.addEventListener('click', () => answerMsg(true));
+msgCancelBtn.addEventListener('click', () => answerMsg(false));
+msgModalEl.addEventListener('click', (e) => { if (e.target === msgModalEl) answerMsg(false); });
 
 // Offer to save the just-ended run. No-op for guests, empty runs, or a run we
 // already concluded. Fires at most once per run (via _runConcluded).
