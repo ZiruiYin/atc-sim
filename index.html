@@ -777,17 +777,25 @@ const STAR_TOGGLES = [
 // ?engine=pyodide in the URL.
 // ---------------------------------------------------------------------------
 
+// Per-browser session id. The Flask backend is multi-tenant: every request
+// carries this so each tab gets its own simulation. Without it, all visitors
+// would share one global sim and see each other's aircraft. New id per page
+// load (a reload = a fresh game, matching the existing behaviour).
+const SESSION_ID = (window.crypto && crypto.randomUUID)
+  ? crypto.randomUUID()
+  : 's' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+
 async function postJson(url, body) {
   const r = await fetch(url, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json', 'X-Session-Id': SESSION_ID},
     body: JSON.stringify(body || {}),
   });
   return r.json();
 }
 
 async function getJson(url) {
-  const r = await fetch(url);
+  const r = await fetch(url, {headers: {'X-Session-Id': SESSION_ID}});
   return r.json();
 }
 
@@ -947,7 +955,7 @@ async function selectEngine() {
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 1500);
-    const r = await fetch('/state', {signal: ctl.signal});
+    const r = await fetch('/state', {signal: ctl.signal, headers: {'X-Session-Id': SESSION_ID}});
     clearTimeout(t);
     if (r.ok) {
       const j = await r.json();

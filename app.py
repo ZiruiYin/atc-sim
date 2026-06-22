@@ -1,4 +1,7 @@
 import os
+import threading
+import time
+from collections import OrderedDict
 
 from flask import Flask, jsonify, request, send_from_directory
 
@@ -13,51 +16,94 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 
 RADAR_SIDE = 800
-sim = None
 
-# AUTO planner (Flask-backend only — cannot run in the Pyodide build). The
-# planner + torch are imported lazily so the base sim never pays for them.
-_auto_planner = None
-auto_on = False
+# Defaults for a new session's first sim (overridden by main.py's CLI flags).
+DEFAULT_AIRPORT = "test"
+DEFAULT_STAR_MODE = True
+
+# --- Per-session (multi-tenant) state ----------------------------------------
+# The Flask backend serves many browsers at once. Each one gets its OWN
+# simulation (and, lazily, its own AUTO planner), keyed by the X-Session-Id
+# header the client sends with every request. Without this, all visitors share
+# one global sim and see each other's aircraft. Sessions are dropped when idle
+# or when the cap is exceeded (least-recently-used first).
+MAX_SESSIONS = 80
+SESSION_TTL = 1800.0          # seconds of inactivity before eviction
+_sessions = OrderedDict()      # sid -> Session (most-recently-used at the end)
+_sessions_lock = threading.Lock()
+
+
+class Session:
+    """One browser's world: its simulation plus optional AUTO planner."""
+
+    def __init__(self, airport, star_mode):
+        self.sim = SimulationEnv(
+            radar_side=RADAR_SIDE,
+            airport_name=airport,
+            star_mode=star_mode,
+        )
+        # AUTO planner is created lazily (and torch loaded) only if this session
+        # actually engages AUTO — most sessions never pay for it.
+        self.auto_planner = None
+        self.auto_on = False
+        self.last_seen = time.monotonic()
+
+    def is_simulated(self):
+        # The SIMULATED airport (STAR-following) maps to the 'test' data; AUTO
+        # and the strict 2 NM rule are SIMULATED-only.
+        return self.sim.airport_name == "test"
+
+    def get_planner(self):
+        if self.auto_planner is None:
+            from auto_plan.planner import AutoPlanner
+            self.auto_planner = AutoPlanner(airport="test", runway="27", plan_steps=400)
+        return self.auto_planner
+
+    def auto_status(self):
+        st = {"on": self.auto_on, "available": self.is_simulated()}
+        if self.auto_planner is not None:
+            st.update(self.auto_planner.status())
+            st["on"] = self.auto_on
+        return st
+
+    def state_payload(self):
+        """sim state + AUTO overlay (planning flag, flight-plan lines) when on."""
+        s = self.sim.get_state()
+        if self.auto_on and self.is_simulated() and self.auto_planner is not None:
+            s.update(self.auto_planner.overlay())
+        return s
+
+
+def _evict_locked():
+    """Drop idle sessions and enforce the cap. Call with _sessions_lock held."""
+    now = time.monotonic()
+    for sid in [sid for sid, s in _sessions.items() if now - s.last_seen > SESSION_TTL]:
+        _sessions.pop(sid, None)
+    while len(_sessions) > MAX_SESSIONS:
+        _sessions.popitem(last=False)   # evict least-recently-used
+
+
+def get_session(create=True):
+    """Return this request's Session (keyed by the X-Session-Id header)."""
+    sid = request.headers.get('X-Session-Id') or request.args.get('sid') or 'anon'
+    with _sessions_lock:
+        sess = _sessions.get(sid)
+        if sess is None:
+            if not create:
+                return None
+            sess = Session(DEFAULT_AIRPORT, DEFAULT_STAR_MODE)
+            _sessions[sid] = sess
+        sess.last_seen = time.monotonic()
+        _sessions.move_to_end(sid)
+        _evict_locked()
+        return sess
 
 
 def init_simulation(airport="test", star_mode=True):
-    global sim
-    sim = SimulationEnv(
-        radar_side=RADAR_SIDE,
-        airport_name=airport,
-        star_mode=star_mode,
-    )
-
-
-def _is_simulated():
-    # The SIMULATED airport (STAR-following) maps to the 'test' data; AUTO and
-    # the strict 2 NM rule are SIMULATED-only.
-    return sim is not None and sim.airport_name == "test"
-
-
-def _get_planner():
-    global _auto_planner
-    if _auto_planner is None:
-        from auto_plan import get_planner
-        _auto_planner = get_planner(airport="test", runway="27", plan_steps=400)
-    return _auto_planner
-
-
-def _auto_status():
-    st = {"on": auto_on, "available": _is_simulated()}
-    if _auto_planner is not None:
-        st.update(_auto_planner.status())
-        st["on"] = auto_on
-    return st
-
-
-def _state_payload():
-    """sim state + AUTO overlay (planning flag, flight-plan lines) when on."""
-    s = sim.get_state()
-    if auto_on and _is_simulated() and _auto_planner is not None:
-        s.update(_auto_planner.overlay())
-    return s
+    """Set the defaults new sessions start from (used by main.py's CLI)."""
+    global DEFAULT_AIRPORT, DEFAULT_STAR_MODE
+    DEFAULT_AIRPORT = airport
+    DEFAULT_STAR_MODE = star_mode
 
 
 @app.route('/')
@@ -85,28 +131,30 @@ def web_files(filename):
 
 @app.route('/state', methods=['GET'])
 def state():
-    return jsonify(_state_payload())
+    return jsonify(get_session().state_payload())
 
 
 @app.route('/step', methods=['POST'])
 def step():
-    if auto_on and _is_simulated() and _auto_planner is not None:
+    sess = get_session()
+    if sess.auto_on and sess.is_simulated() and sess.auto_planner is not None:
         # The planner runs its own fast_forward loop and HOLDS the sim while a
         # background replan is in flight (never blocks this request).
-        if not sim.crash_occurred:
-            _auto_planner.step(sim)
+        if not sess.sim.crash_occurred:
+            sess.auto_planner.step(sess.sim)
     else:
-        for _ in range(sim.fast_forward):
-            sim.step(1.0)
-    return jsonify(_state_payload())
+        for _ in range(sess.sim.fast_forward):
+            sess.sim.step(1.0)
+    return jsonify(sess.state_payload())
 
 
 @app.route('/command', methods=['POST'])
 def command():
+    sess = get_session()
     data = request.get_json(force=True) or {}
     callsign = data.get('callsign', '')
     cmd = data.get('command', '')
-    result = sim.command(callsign, cmd)
+    result = sess.sim.command(callsign, cmd)
     return jsonify({
         "ok": result.get("ok", False),
         "category": result.get("category"),
@@ -119,84 +167,89 @@ def command():
 
 @app.route('/speed', methods=['POST'])
 def speed():
+    sess = get_session()
     data = request.get_json(force=True) or {}
     multiplier = int(data.get('multiplier', 1))
-    sim.set_speed(multiplier)
-    return jsonify({"ok": True, "fast_forward": sim.fast_forward})
+    sess.sim.set_speed(multiplier)
+    return jsonify({"ok": True, "fast_forward": sess.sim.fast_forward})
 
 
 @app.route('/spawn_rate', methods=['POST'])
 def spawn_rate():
+    sess = get_session()
     data = request.get_json(force=True) or {}
     rate = int(data.get('rate', 90))
-    sim.set_spawn_rate(rate)
-    return jsonify({"ok": True, "spawn_rate": sim.spawn_rate})
+    sess.sim.set_spawn_rate(rate)
+    return jsonify({"ok": True, "spawn_rate": sess.sim.spawn_rate})
 
 
 @app.route('/spawn_directions', methods=['POST'])
 def spawn_directions():
+    sess = get_session()
     data = request.get_json(force=True) or {}
     dirs = data.get('directions', [])
-    sim.set_spawn_directions(dirs)
-    return jsonify({"ok": True, "spawn_directions": sim.spawn_directions})
+    sess.sim.set_spawn_directions(dirs)
+    return jsonify({"ok": True, "spawn_directions": sess.sim.spawn_directions})
 
 
 @app.route('/restart', methods=['POST'])
 def restart():
-    global auto_on
+    sess = get_session()
     data = request.get_json(force=True) or {}
-    sim.restart(
+    sess.sim.restart(
         spawn_single=data.get('spawn_single'),
         star_mode=data.get('star_mode'),
         airport_name=data.get('airport_name'),
     )
     # The old aircraft are gone. If AUTO stays on (still SIMULATED) re-init the
     # planner for the fresh sim; otherwise clear it and turn AUTO off.
-    if not _is_simulated():
-        auto_on = False
-    if _auto_planner is not None:
-        if auto_on and _is_simulated():
-            _auto_planner.enable(sim)
+    if not sess.is_simulated():
+        sess.auto_on = False
+    if sess.auto_planner is not None:
+        if sess.auto_on and sess.is_simulated():
+            sess.auto_planner.enable(sess.sim)
         else:
-            _auto_planner.reset(sim)
-    return jsonify(_state_payload())
+            sess.auto_planner.reset(sess.sim)
+    return jsonify(sess.state_payload())
 
 
 @app.route('/auto', methods=['GET', 'POST'])
 def auto():
-    global auto_on
+    sess = get_session()
     if request.method == 'GET':
-        return jsonify(_auto_status())
+        return jsonify(sess.auto_status())
     data = request.get_json(force=True) or {}
     want = bool(data.get('on'))
     if want:
-        if not _is_simulated():
+        if not sess.is_simulated():
             return jsonify({"ok": False, "on": False,
                             "message": "AUTO is only available for the SIMULATED airport"}), 400
-        _get_planner().start()      # one-time policy load + pool warmup
-        _auto_planner.enable(sim)   # clear stale state; arming starts next step
-        auto_on = True
+        sess.get_planner().start()       # one-time policy load + pool warmup
+        sess.auto_planner.enable(sess.sim)   # clear stale state; arming starts next step
+        sess.auto_on = True
     else:
-        auto_on = False
-        if _auto_planner is not None:
-            _auto_planner.disable(sim)   # restore physics, leave planes cleared to land
-    return jsonify({"ok": True, **_auto_status()})
+        sess.auto_on = False
+        if sess.auto_planner is not None:
+            sess.auto_planner.disable(sess.sim)   # restore physics, leave planes cleared to land
+    return jsonify({"ok": True, **sess.auto_status()})
 
 
 @app.route('/recording/start', methods=['POST'])
 def recording_start():
-    ok = sim.start_recording()
-    return jsonify({"ok": bool(ok), "recording": sim.is_recording()})
+    sess = get_session()
+    ok = sess.sim.start_recording()
+    return jsonify({"ok": bool(ok), "recording": sess.sim.is_recording()})
 
 
 @app.route('/recording/stop', methods=['POST'])
 def recording_stop():
-    csv_text, filename = sim.stop_recording()
+    sess = get_session()
+    csv_text, filename = sess.sim.stop_recording()
     return jsonify({
         "ok": csv_text is not None,
         "csv": csv_text or "",
         "filename": filename or "",
-        "recording": sim.is_recording(),
+        "recording": sess.sim.is_recording(),
     })
 
 
