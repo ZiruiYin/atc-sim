@@ -491,7 +491,7 @@
 <div id="landing">
   <div id="landingInner">
     <h1 id="landingTitle">TRACON SIMULATOR</h1>
-    <div id="landingTag">APPROACH CONTROL</div>
+    <div id="landingTag">AN ATC SIMULATOR</div>
 
     <div class="landing-card" id="authBox">
       <div id="authUserRow" style="display:none;">
@@ -1458,6 +1458,16 @@ async function setSpeed(multiplier) {
   speedBtn.textContent = `Speed: ${fastForward}x`;
   speedBtn.classList.toggle('active', fastForward !== 1);
   ffIndicator.textContent = (fastForward !== 1 && !paused) ? `X${fastForward}` : '';
+
+  // Make the new speed visible on the very next frame instead of ~1s later.
+  // The loop pre-fetches one frame ahead (computed with the OLD speed), so we:
+  //   - bump the epoch  -> that buffered old-speed frame is discarded, not drawn
+  //   - reset the grid  -> _renderFrame = -1 makes the next loop frame's target
+  //                        land at "now", so it redraws immediately at the new
+  //                        speed (same resync mechanism as applyRestart).
+  _renderEpoch++;
+  _renderT0 = 0;
+  _renderFrame = -1;
 }
 
 async function bumpSpawnRate(delta) {
