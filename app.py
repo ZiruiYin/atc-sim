@@ -3,7 +3,8 @@ import threading
 import time
 from collections import OrderedDict
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, Response
+from werkzeug.serving import WSGIRequestHandler
 
 from environment import SimulationEnv
 
@@ -14,6 +15,19 @@ from environment import SimulationEnv
 # No static_folder= argument; everything is served explicitly below.
 ROOT = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
+
+# Disable Nagle's algorithm on the Werkzeug dev server. Without TCP_NODELAY, the
+# browser's tiny /step POSTs hit a Nagle + TCP delayed-ACK stall (~300ms on every
+# other request) that makes the radar tick limp one-fast-one-slow. Use this
+# handler for EVERY launch path (app.py AND main.py) so the fix can't be missed.
+class NoNagleRequestHandler(WSGIRequestHandler):
+    def setup(self):
+        super().setup()
+        try:
+            import socket as _socket
+            self.connection.setsockopt(_socket.IPPROTO_TCP, _socket.TCP_NODELAY, 1)
+        except OSError:
+            pass
 
 RADAR_SIDE = 800
 
@@ -111,6 +125,13 @@ def index():
     return send_from_directory(ROOT, 'index.html')
 
 
+@app.route('/favicon.ico')
+def favicon():
+    # Browsers auto-request /favicon.ico; we have none, so answer 204 (no content)
+    # instead of a noisy 404 in the console.
+    return ('', 204)
+
+
 @app.route('/env_manifest.json')
 def env_manifest():
     return send_from_directory(ROOT, 'env_manifest.json')
@@ -163,6 +184,27 @@ def command():
         "message": result.get("message"),
         "callsign": result.get("callsign", callsign),
     })
+
+
+@app.route('/tts', methods=['POST'])
+def tts():
+    """Synthesize a controller/pilot line to WAV for the browser to play.
+
+    Body: {text, is_controller (callsign placement), controller_voice (which
+    checkpoint)}. Returns audio/wav bytes. Only reachable under the Flask backend
+    (the static/Pyodide build simply gets no audio)."""
+    data = request.get_json(force=True) or {}
+    text = (data.get('text') or '').strip()
+    if not text:
+        return jsonify({"ok": False, "message": "no text"}), 400
+    is_controller = bool(data.get('is_controller', True))
+    controller_voice = bool(data.get('controller_voice', is_controller))
+    try:
+        from tts.synth import render
+        wav = render(text, is_controller=is_controller, controller_voice=controller_voice)
+    except Exception as e:                       # piper missing / synth failure
+        return jsonify({"ok": False, "message": str(e)}), 500
+    return Response(wav, mimetype='audio/wav')
 
 
 @app.route('/speed', methods=['POST'])
@@ -253,6 +295,23 @@ def recording_stop():
     })
 
 
+def _warm_tts():
+    """Pre-load both Piper voices at boot so the first manual command speaks
+    instantly (cold load is ~2.5s/voice; warm synth is ~0.3s)."""
+    try:
+        from tts.synth import warmup
+        warmup()
+        print("[tts] voices warmed (controller + pilot)")
+    except Exception as e:                       # piper missing / no voices
+        print(f"[tts] warmup skipped: {e}")
+
+
+# Kick the warmup as soon as the backend is imported (i.e. when the game starts),
+# in a daemon thread so it never delays server startup or request handling.
+threading.Thread(target=_warm_tts, daemon=True).start()
+
+
 if __name__ == '__main__':
     init_simulation()
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    app.run(host='127.0.0.1', port=5000, debug=False, threaded=True,
+            request_handler=NoNagleRequestHandler)

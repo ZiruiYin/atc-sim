@@ -18,7 +18,8 @@ WORKDIR /app
 # Install Python deps first for layer caching. CPU-only torch keeps this lean.
 COPY requirements.txt .
 RUN pip install --no-cache-dir flask>=2.0 numpy>=1.24 \
- && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch
+ && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch \
+ && pip install --no-cache-dir piper-tts   # local CPU TTS (onnxruntime + espeak-ng)
 
 # App source (the .dockerignore trims training/dev cruft).
 COPY . .

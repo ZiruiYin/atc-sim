@@ -436,13 +436,15 @@ class Aircraft:
                     if cur_alt < 3000:
                         buckets.append((BUCKET['alt'], 'climb and maintain 3000'))
                     else:
-                        buckets.append((BUCKET['alt'], f'maintain {cur_alt}'))
+                        buckets.append((BUCKET['alt'], f'maintain {int(cur_alt)}'))
                 continue
             parts = (param or '').split(';')
             first = parts[0]
             if cmd_type == 'C':
                 if first.isdigit() and len(first) == 3:
                     hdg = int(first)
+                    # Spoken/written heading uses 360 for north, never 000.
+                    hdg_disp = hdg % 360 or 360
                     explicit = parts[1] if len(parts) > 1 and parts[1] in ('L', 'R') else None
                     turn_dir = explicit
                     if turn_dir is None:
@@ -456,9 +458,9 @@ class Aircraft:
                             turn_dir = 'L'
                     if turn_dir:
                         word = 'left' if turn_dir == 'L' else 'right'
-                        buckets.append((BUCKET['vector'], f'turn {word} heading {hdg:03d}'))
+                        buckets.append((BUCKET['vector'], f'turn {word} heading {hdg_disp:03d}'))
                     else:
-                        buckets.append((BUCKET['vector'], f'fly heading {hdg:03d}'))
+                        buckets.append((BUCKET['vector'], f'fly heading {hdg_disp:03d}'))
                 elif first.isdigit() and len(first) <= 2:
                     alt = int(first) * 1000
                     if alt > before['altitude']:

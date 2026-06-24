@@ -71,3 +71,10 @@ $RECYCLE.BIN/
 
 # Sim CSV recordings (Record feature; none are tracked)
 *.csv
+
+# TTS: the cleaned training data (audio clips + metadata) and the model-ladder
+# are never committed — regenerate via tts_training/prepare_data.py + modal_app.py.
+tts_training/data/
+tts_training/models/
+# Scratch synth test wavs. (tts/voices/*.onnx ARE committed, via Git LFS.)
+tts/_*.wav

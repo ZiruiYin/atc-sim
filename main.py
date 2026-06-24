@@ -1,6 +1,6 @@
 import argparse
 
-from app import app, init_simulation
+from app import app, init_simulation, NoNagleRequestHandler
 
 
 def main():
@@ -23,8 +23,10 @@ def main():
     init_simulation(airport=args.airport, star_mode=not args.free_mode)
     # threaded so a /state poll isn't blocked while a /step (or a background
     # AUTO replan) is in flight — matters when the Hugging Face Space serves a
-    # couple of tabs at once.
-    app.run(host=args.host, port=args.port, debug=False, threaded=True)
+    # couple of tabs at once. NoNagleRequestHandler disables Nagle/TCP_NODELAY so
+    # the per-second /step POSTs don't hit the delayed-ACK stall (radar limp).
+    app.run(host=args.host, port=args.port, debug=False, threaded=True,
+            request_handler=NoNagleRequestHandler)
 
 
 if __name__ == '__main__':
