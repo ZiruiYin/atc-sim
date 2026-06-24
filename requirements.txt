@@ -9,3 +9,8 @@ flask>=2.0
 # (torch is a large download; skip this section if you don't need AUTO.)
 numpy>=1.24
 torch>=2.1
+
+# --- TTS radio voices (backend-only) -----------------------------------------
+# Controller/pilot speech via Piper (onnxruntime + bundled espeak-ng; no torch).
+# Needed for the /tts route + tts/ package. Not used by the Pyodide build.
+piper-tts>=1.4

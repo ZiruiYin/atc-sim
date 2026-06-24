@@ -1435,6 +1435,7 @@ async function init() {
 }
 
 const TICK_MS = 1000;
+const TICK_DEBUG = false;  // set true to log per-frame timing (late/fetch/draw) to console
 
 function perfNow() {
   return (typeof performance !== 'undefined' && performance.now)
@@ -1501,6 +1502,7 @@ async function scheduleTick() {
     target = now;
   }
   setTimeout(async () => {
+    const _fireLate = perfNow() - target;   // how late did the timer fire vs grid?
     // Bail if anything changed while we waited (toggle/restart bumped the epoch
     // or raised a flag) — don't step at a now-stale speed.
     if (epoch !== _renderEpoch || _restarting || _repacing) { scheduleTick(); return; }
@@ -1508,20 +1510,28 @@ async function scheduleTick() {
     // advance — only refresh the view.
     const freeze = paused || autoLoading;
     let state;
+    const _f0 = perfNow();
     try {
       state = freeze ? await engine.state() : await engine.step();
     } catch (e) {
       setTimeout(scheduleTick, TICK_MS);   // transient hiccup — retry next grid
       return;
     }
+    const _fetchMs = perfNow() - _f0;
     if (epoch !== _renderEpoch || _restarting || _repacing) {
       // A restart/speed change landed mid-step — drop this (now stale) result.
       scheduleTick();
       return;
     }
     lastState = state;
+    const _d0 = perfNow();
     draw(state);
     updateHud(state);
+    const _drawMs = perfNow() - _d0;
+    if (TICK_DEBUG) {
+      const total = perfNow() - target;   // wall time this frame landed vs its grid slot
+      console.log(`tick ${_renderFrame}: late=${_fireLate.toFixed(0)} fetch=${_fetchMs.toFixed(0)} draw=${_drawMs.toFixed(0)} total=${total.toFixed(0)} ms`);
+    }
     scheduleTick();   // schedule the next boundary
   }, Math.max(0, target - now));
 }
@@ -1731,9 +1741,55 @@ cmdInput.addEventListener('keydown', async (e) => {
   } else if (r && r.category === 'success') {
     if (r.atc) appendScript('atc', r.atc);
     if (r.pilot) appendScript('pilot', r.pilot);
+    speakExchange(r.atc, r.pilot);
     cmdInput.value = '';
   }
 });
+
+// --- TTS playback (manual commands only) ---------------------------------
+// Both lines are synthesized CONCURRENTLY (two requests fired at once), then
+// played in order -- controller, ~0.5s gap, pilot -- so the readback is already
+// rendered when the controller finishes. Silent if there's no /tts backend.
+const TTS_GAP_MS = 500;
+let ttsChain = Promise.resolve();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchTtsUrl(text, isController) {
+  try {
+    const resp = await fetch('/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, is_controller: isController, controller_voice: isController }),
+    });
+    if (!resp.ok) return null;
+    return URL.createObjectURL(await resp.blob());
+  } catch (e) { return null; }
+}
+
+function playUrl(url) {
+  return new Promise((resolve) => {
+    if (!url) return resolve();
+    const audio = new Audio(url);
+    audio.onended = audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+    audio.play().catch(() => { URL.revokeObjectURL(url); resolve(); });
+  });
+}
+
+function speakExchange(atcText, pilotText) {
+  ttsChain = ttsChain.then(async () => {
+    // Controller synthesizes ALONE so it starts speaking as fast as possible
+    // (no CPU contention from the pilot synth).
+    const atcUrl = atcText ? await fetchTtsUrl(atcText, true) : null;
+    // Now start the pilot synth: it renders DURING controller playback (audio
+    // playback isn't CPU-bound), so it's ready in time without delaying the
+    // controller's start.
+    const pilotUrlP = pilotText ? fetchTtsUrl(pilotText, false) : Promise.resolve(null);
+    await playUrl(atcUrl);
+    const pilotUrl = await pilotUrlP;
+    if (atcUrl && pilotUrl) await sleep(TTS_GAP_MS);
+    await playUrl(pilotUrl);
+  });
+}
 
 const SCRIPT_MAX = 100;
 const scriptMessages = [];
