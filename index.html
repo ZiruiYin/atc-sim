@@ -516,6 +516,71 @@
   #msgBtns button { flex: 1; padding: 9px; }
   #msgOk { background: #1d4a2a; color: #d6f0db; border-color: #2f7a43; font-weight: bold; }
   #msgOk:hover { background: #266237; }
+
+  /* ---- User Manual button (landing page, top-left) --------------------- */
+  #helpBtn {
+    position: fixed; top: 16px; left: 16px; z-index: 40;
+    background: #1d4a2a; color: #d6f0db; border: 1px solid #2f7a43;
+    padding: 8px 14px; font: bold 13px monospace; letter-spacing: 1px;
+    cursor: pointer;
+  }
+  #helpBtn:hover { background: #266237; }
+
+  /* ---- User Manual modal (scrolling) ---------------------------------- */
+  #helpModal {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(0, 0, 0, 0.78);
+    display: none; align-items: center; justify-content: center;
+  }
+  #helpDialog {
+    position: relative;
+    background: #161a16; border: 1px solid #2f7a43; border-radius: 6px;
+    width: 780px; max-width: 94vw; max-height: 88vh;
+    display: flex; flex-direction: column;
+  }
+  #helpClose {
+    position: absolute; top: 6px; right: 8px;
+    background: transparent; border: none; color: #8fae96;
+    font-size: 24px; line-height: 1; cursor: pointer; padding: 4px 10px;
+  }
+  #helpClose:hover { color: #fff; background: transparent; }
+  #helpBody {
+    overflow-y: auto;
+    padding: 26px 30px 30px 30px;
+    font: 13px/1.65 monospace; color: #cfe0d3;
+  }
+  #helpBody h1 {
+    margin: 0 0 16px 0; font-size: 20px; letter-spacing: 2px; color: #5bbf6e;
+    font-weight: bold;
+  }
+  #helpBody h2 {
+    margin: 26px 0 10px 0; font-size: 15px; letter-spacing: 1px; color: #8fae96;
+    border-bottom: 1px solid #2c3a2e; padding-bottom: 4px;
+  }
+  #helpBody h3 {
+    margin: 18px 0 8px 0; font-size: 13px; letter-spacing: 1px; color: #9cc7a6;
+  }
+  #helpBody p { margin: 8px 0; }
+  #helpBody ul { margin: 8px 0; padding-left: 22px; }
+  #helpBody li { margin: 4px 0; }
+  #helpBody code {
+    background: #20271f; color: #e8f5e8; padding: 1px 5px; border-radius: 3px;
+  }
+  #helpBody pre {
+    background: #20271f; border: 1px solid #2c3a2e; border-radius: 4px;
+    padding: 10px 12px; overflow-x: auto; margin: 10px 0;
+  }
+  #helpBody pre code { background: transparent; padding: 0; }
+  #helpBody table {
+    width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12px;
+  }
+  #helpBody th, #helpBody td {
+    border: 1px solid #2c3a2e; padding: 5px 8px; text-align: left;
+    vertical-align: top;
+  }
+  #helpBody th { color: #8fae96; font-weight: normal; background: #1b211b; }
+  #helpBody a { color: #7fc98e; }
+  #helpBody strong { color: #fff; }
 </style>
 <!-- Accounts + leaderboard (Supabase). Pure browser<->Supabase, so this works
      on BOTH the GitHub Pages (Pyodide) build and the Hugging Face (Flask) one.
@@ -529,6 +594,7 @@
 
 <!-- ============================ PAGE 1: LANDING ========================== -->
 <div id="landing">
+  <button id="helpBtn" title="Open the user manual">User Manual</button>
   <div id="landingInner">
     <h1 id="landingTitle">TRACON SIMULATOR</h1>
     <div id="landingTag">AN ATC SIMULATOR</div>
@@ -583,6 +649,240 @@
     <div id="msgBtns">
       <button id="msgOk">OK</button>
       <button id="msgCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Manual modal (shared: landing "User Manual" button + in-sim HELP cmd) -->
+<div id="helpModal">
+  <div id="helpDialog">
+    <button id="helpClose" title="Close">&times;</button>
+    <div id="helpBody">
+      <h1>ATC Simulator — User Manual</h1>
+      <p>A browser-based approach controller simulator. You vector inbound traffic
+      onto the ILS and land them. Default airport is called SIMULATOR (a simulator
+      airport named TEST) with Standard Terminal Arrival Routes (STARs) for runway
+      27. EGLL (London Heathrow) is also available but with no STAR implemented yet.</p>
+
+      <h2>The display</h2>
+      <p>The browser window has three columns.</p>
+
+      <h3>Center — radar scope</h3>
+      <p>The radar is an 800×800 backing canvas scaled to your viewport. North is up,
+      distances are in nautical miles, and the visible range is 60 nm across (a 30 nm
+      radius).</p>
+      <p>What you see on the scope:</p>
+      <ul>
+        <li><strong>Airport label</strong>, runways, range rings every 5 nm</li>
+        <li><strong>VORs, NDBs, named waypoints</strong> (toggleable)</li>
+        <li><strong>Aircraft</strong>: a white dot, a fading trail (last 10 positions), and a data tag</li>
+        <li><strong>Red</strong> dot/tag means the aircraft is in a separation conflict</li>
+        <li><strong>Crash overlay</strong> ends the session if two aircraft collide</li>
+      </ul>
+
+      <h3>Aircraft tag (data block)</h3>
+      <p>Toggle detailed tags with the <strong>D</strong> key. The tag format varies with state:</p>
+      <pre><code>CALLSIGN  IAS  ALT  HDG-or-WPT-or-APPROACH-INFO</code></pre>
+      <ul>
+        <li><strong>IAS</strong>: knots. If a different speed has been commanded, you see <code>current-&gt;target</code> (e.g., <code>220-&gt;180</code>).</li>
+        <li><strong>ALT</strong>: hundreds of feet (so <code>30</code> = 3000 ft). Same <code>current-&gt;target</code> rule when climbing/descending.</li>
+        <li><strong>Last field</strong> depends on what the aircraft is doing:
+          <ul>
+            <li><code>270</code> — flying heading 270</li>
+            <li><code>BIG</code> — direct to waypoint BIG</li>
+            <li><code>H</code> — in a holding pattern</li>
+            <li><code>LOC 27</code> / <code>GS 27</code> — captured localizer / glideslope for runway 27</li>
+            <li><code>&lt;hdg&gt; 27 loc gs</code> — cleared for runway 27 but not yet captured (lowercase tokens = not yet captured)</li>
+          </ul>
+        </li>
+      </ul>
+      <p>Hold <strong>Ctrl</strong> to swap the tag to <code>CALLSIGN STAR_NAME</code> for any
+      aircraft following a STAR (and to hide LOC/GS substitutions, so you see the
+      underlying numbers).</p>
+      <p>When detailed tags are off (D), only the callsign is shown.</p>
+
+      <h3>Right column — control panel</h3>
+      <ul>
+        <li><strong>Score row</strong>: <code>Landed: N  Violation: Ns  Exits: N</code> with <code>Time: M:SS</code> on the next line
+          <ul>
+            <li><em>Landed</em>: successful arrivals</li>
+            <li><em>Violation</em>: cumulative seconds any aircraft has spent in a separation conflict</li>
+            <li><em>Exits</em>: aircraft that left the radar boundary without landing</li>
+            <li><em>Time</em>: simulator seconds elapsed this run (sim-clock, not wall-clock). Recorded as your run's play time on the leaderboard.</li>
+          </ul>
+        </li>
+        <li><strong>Display toggles</strong>: A, R, V, N, W, U, D — described below</li>
+        <li><strong>STAR toggles</strong> (<code>1</code>–<code>6</code>): overlay published STAR procedures on the scope (NORTH1/2/3, SOUTH1/2/3). These belong to the <strong>SIMULATED</strong> airport, which spawns its traffic on STARs; EGLL has no STARs yet.</li>
+        <li><strong>Spawn directions</strong> (N/E/S/W): which radar edges new aircraft come from — used on <strong>EGLL</strong>. Disabled on the SIMULATED airport, which spawns aircraft onto STARs instead.</li>
+        <li><strong>Spawn rate</strong>: seconds between spawns; use <code>−</code> / <code>+</code> to make it faster/slower</li>
+        <li><strong>Flight strips</strong>: one strip per active aircraft — click a strip to load that callsign into the command box</li>
+      </ul>
+
+      <h3>Left column — airport selector + script log</h3>
+      <p>The top of the left column has the <strong>airport selector</strong> (SIMULATED / EGLL)
+      and an <strong>EXIT</strong> button, which returns you to the title screen (offering to save
+      your run first if you're logged in). Below it is a live transcript of ATC and pilot
+      radio calls, plus rejection messages:</p>
+      <ul>
+        <li><strong>ATC</strong> lines (you / the controller)</li>
+        <li><strong>Pilot</strong> readbacks</li>
+        <li><strong>INVALID</strong> — command was malformed</li>
+        <li><strong>UNABLE</strong> — command was well-formed but disallowed in the aircraft's current state</li>
+      </ul>
+
+      <h3>Bottom — command bar</h3>
+      <ul>
+        <li><strong>Command box</strong>: type <code>CALLSIGN COMMAND</code> and press <code>Enter</code>. Type <code>HELP</code> to open this manual. Press <code>Esc</code> to release focus. Clicking an aircraft on the radar, or a flight strip, pre-fills the callsign.</li>
+        <li><strong>Speed</strong>: toggles 1× ⇄ 10× (also <code>Tab</code>). In 10×, the radar updates the same once-per-second cadence but the simulation advances 10 simulated seconds per update.</li>
+        <li><strong>Pause</strong>: pauses the simulation (also <code>P</code>).</li>
+        <li><strong>Restart</strong>: clears all aircraft and the score and starts a fresh run on the current airport (offers to save your run first if you're logged in).</li>
+      </ul>
+
+      <h3>Keyboard shortcuts</h3>
+      <p>Active only when the command box is <strong>not</strong> focused (press <code>Esc</code> to leave the box).</p>
+      <table>
+        <thead><tr><th>Key</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>Tab</code></td><td>Toggle 1× / 10× speed</td></tr>
+          <tr><td><code>P</code></td><td>Pause / resume</td></tr>
+          <tr><td><code>A</code></td><td>Toggle airport label</td></tr>
+          <tr><td><code>R</code></td><td>Toggle range rings</td></tr>
+          <tr><td><code>V</code></td><td>Toggle VOR stations</td></tr>
+          <tr><td><code>N</code></td><td>Toggle NDB stations</td></tr>
+          <tr><td><code>W</code></td><td>Toggle waypoints</td></tr>
+          <tr><td><code>U</code></td><td>Toggle runway names</td></tr>
+          <tr><td><code>D</code></td><td>Toggle detailed aircraft tags</td></tr>
+          <tr><td><code>1</code>–<code>6</code></td><td>Toggle published STAR overlays</td></tr>
+          <tr><td><code>↑ ↓ ← →</code></td><td>Toggle North / South / West / East spawn edges</td></tr>
+          <tr><td><code>+</code> / <code>−</code></td><td>Slower / faster spawn rate (10 s steps)</td></tr>
+          <tr><td><code>Esc</code></td><td>Release focus from the command box</td></tr>
+          <tr><td>Hold <code>Ctrl</code></td><td>Show STAR name and hide LOC/GS substitution in aircraft tags</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Issuing commands</h2>
+      <p>Format: <code>CALLSIGN COMMAND</code> (case-insensitive). Multiple commands can be chained in one line, separated by spaces.</p>
+      <pre><code>BA42 C 270
+BA42 C 5
+BA42 S 200
+BA42 C 270 C 5 S 200 L 27R</code></pre>
+      <p>Click an aircraft (or its strip) to autofill the callsign, then type the rest. Press <code>Enter</code> to send.</p>
+
+      <h3>Command summary</h3>
+      <table>
+        <thead><tr><th>Cmd</th><th>Param</th><th>Modifiers</th><th>Example</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>A</code></td><td>—</td><td>—</td><td><code>BA42 A</code></td><td>Abort approach (go around)</td></tr>
+          <tr><td><code>C</code></td><td>heading (3 digits, 0–360)</td><td><code>;L</code> or <code>;R</code> for turn direction</td><td><code>BA42 C 270;L</code></td><td>Turn to heading</td></tr>
+          <tr><td><code>C</code></td><td>altitude (1–2 digits, 1–18 = ×1000 ft)</td><td><code>;X</code> to expedite</td><td><code>BA42 C 5;X</code></td><td>Climb/descend to altitude</td></tr>
+          <tr><td><code>C</code></td><td>waypoint name</td><td><code>;L</code> or <code>;R</code></td><td><code>BA42 C BIG</code></td><td>Proceed direct to waypoint</td></tr>
+          <tr><td><code>S</code></td><td>speed (140–280 kt)</td><td><code>;X</code> to expedite</td><td><code>BA42 S 200;X</code></td><td>Set indicated airspeed</td></tr>
+          <tr><td><code>H</code></td><td>waypoint name</td><td><code>;L</code> or <code>;R</code> (default <code>R</code>)</td><td><code>BA42 H CPT</code></td><td>Hold at waypoint (racetrack)</td></tr>
+          <tr><td><code>L</code></td><td>runway name</td><td>—</td><td><code>BA42 L 27R</code></td><td>Clear for ILS approach</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Modifiers (suffixes after ;)</h3>
+      <ul>
+        <li><code>;L</code> / <code>;R</code> — force left/right turn (otherwise the shorter side is chosen). Applies to <code>C [heading]</code>, <code>C [waypoint]</code>, <code>H [waypoint]</code>.</li>
+        <li><code>;X</code> — expedite. Applies to <code>C [altitude]</code> and <code>S [speed]</code>; uses higher climb/descent or acceleration rates.</li>
+      </ul>
+
+      <h3>Chain ordering rules</h3>
+      <ul>
+        <li><code>A</code> (abort), if used, must be <strong>first</strong> in the chain.</li>
+        <li><code>L</code> (land), if used, must be <strong>last</strong> in the chain.</li>
+        <li><code>H</code> (hold) cannot be combined with <code>C</code> or <code>L</code> in the same chain.</li>
+      </ul>
+
+      <h3>Heading vs altitude vs waypoint disambiguation for C</h3>
+      <p><code>C</code> is overloaded by the shape of its argument:</p>
+      <ul>
+        <li>Three digits, 0–360 → <strong>heading</strong> (e.g., <code>C 090</code>)</li>
+        <li>One or two digits, 1–18 → <strong>altitude</strong> in thousands of feet (e.g., <code>C 5</code> = 5000 ft)</li>
+        <li>Anything else → looked up as a <strong>waypoint name</strong></li>
+      </ul>
+      <p>So <code>C 5</code> climbs/descends; <code>C 050</code> is a heading change; <code>C BIG</code> is direct to BIG.</p>
+
+      <h3>Abort behavior (A)</h3>
+      <p>Aborting clears any ILS clearance and recovers the aircraft:</p>
+      <ul>
+        <li>Heading → current heading (no turn)</li>
+        <li>Altitude → <code>max(current, 3000 ft)</code></li>
+        <li>Speed → <code>max(current, 180 kt)</code></li>
+      </ul>
+      <p>You can chain commands after <code>A</code> to redirect immediately, e.g. <code>BA42 A C 360 C 5</code>.</p>
+
+      <h3>Landing (L) and the ILS</h3>
+      <p><code>L 27R</code> clears an aircraft for the ILS approach to runway 27R. The aircraft will
+      capture the localizer and glideslope <strong>only when</strong> all four conditions are met simultaneously:</p>
+      <ul>
+        <li>Airspeed below <strong>240 kt</strong></li>
+        <li>Altitude below <strong>5000 ft</strong></li>
+        <li>Distance to threshold within <strong>20 nm</strong></li>
+        <li>Heading within <strong>±30°</strong> of the runway centerline (tightened to <strong>±20°</strong> within 5 nm)</li>
+      </ul>
+      <p>If you clear an aircraft early, the clearance stays active and capture happens once the
+      geometry comes into the window. Once captured, the aircraft locks onto LOC and GS; you
+      can't vector or change altitude until you abort (<code>A</code>). Within 5 nm of the threshold it
+      automatically slows to 140 kt.</p>
+
+      <h3>Holding (H)</h3>
+      <p><code>H BIG</code> puts the aircraft into a right-hand racetrack hold over BIG. Use <code>;L</code> for a
+      left-hand hold. The aircraft remains in the hold until you give it a new heading, waypoint,
+      or land clearance.</p>
+
+      <h2>Separation rules</h2>
+      <p>You must keep aircraft apart. A red dot/tag marks a <strong>separation warning</strong>, and every
+      second any aircraft spends in conflict adds to your <em>Violation</em> count. The two airports
+      use <strong>different</strong> rules.</p>
+
+      <h3>SIMULATED airport</h3>
+      <p>A warning is raised for any two aircraft in the <strong>same medium</strong> (both airborne, or both
+      on the ground) that are within:</p>
+      <ul>
+        <li><strong>less than 2 nm lateral</strong> <em>and</em> <strong>less than 1000 ft vertical</strong>.</li>
+      </ul>
+
+      <h3>EGLL</h3>
+      <p>A warning is raised when two airborne aircraft are within:</p>
+      <ul>
+        <li><strong>less than 3 nm lateral</strong> <em>and</em> <strong>less than 1000 ft vertical</strong>,</li>
+      </ul>
+      <p><strong>unless</strong> either aircraft is established on the ILS, or one is already on the ground
+      after landing. Separately, two aircraft on the <strong>same runway</strong> raise a runway-incursion warning.</p>
+
+      <h3>Crash</h3>
+      <p>If two aircraft are within <strong>0.2 nm lateral and 50 ft vertical or less</strong> at the same instant,
+      they collide and the simulation stops. The crash overlay offers <strong>Restart</strong> and <strong>Exit</strong> buttons.</p>
+
+      <h2>AUTO</h2>
+      <p>On the <strong>SIMULATED</strong> airport you can hand all traffic to an autonomous controller with the
+      <strong>AUTO</strong> button on the radar. AUTO needs PyTorch, so it runs only on the backend deployments
+      or a local <code>python main.py</code>. Engaging AUTO means the run is no longer flown by you, so it
+      forfeits leaderboard saving for the rest of the session. It will attempt to auto-land all
+      aircrafts on runway 27.</p>
+      <p>How it works:</p>
+      <ul>
+        <li><strong>Policy</strong> — a lightweight Gaussian Mixture Model with 6,752 parameters. It was first trained on past human play data, then refined with <a href="https://arxiv.org/abs/1707.06347" target="_blank" rel="noopener">Proximal Policy Optimization</a>.</li>
+        <li><strong>Planning</strong> — a multi-aircraft planner rolls the policy forward, planning 400 steps ahead and resolving conflicts between aircraft before issuing commands each tick.</li>
+        <li><strong>Performance</strong> — over a test of <strong>512 rollouts</strong>, AUTO lands aircraft with a success rate of <strong>nearly 98%</strong>, with low loss of separation and <strong>no crashes</strong>.</li>
+      </ul>
+      <p>The full training pipeline and algorithms are described
+      <a href="https://cs224r.stanford.edu/projects/pdfs/Jerry%20Yin%20submission_416287340/224R_Final_Project.pdf" target="_blank" rel="noopener">here</a>.</p>
+
+      <h2>Outcomes per aircraft</h2>
+      <ul>
+        <li><strong>Landed</strong> — touched down and decelerated to a stop. Counted in <em>Landed</em>.</li>
+        <li><strong>Improper exit</strong> — left the radar area without being cleared for landing. Counted in <em>Exits</em>.</li>
+      </ul>
+      <p>A successful run is one with many landings, zero crashes, low <em>Violation</em> seconds, and few improper exits.</p>
+
+      <h2>Tips</h2>
+      <ul>
+        <li>The flight strip panel shows the same data as the radar tag and is easier to read in heavy traffic.</li>
+        <li>If you encounter issues with the command, be sure to check the log on the left of the display, which would show you the reason why the command was not accepted.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -680,7 +980,7 @@
     </div>
   </div>
   <div id="controls">
-    <input id="cmd" type="text" placeholder="CALLSIGN COMMAND (e.g. DL123 C 270)  --  Esc to release focus, click radar/strip to select" autocomplete="off" />
+    <input id="cmd" type="text" placeholder="Callsign + Command, HELP to see manual, Esc to release focus, click radar/strip to auto-fill callsign" autocomplete="off" />
     <button id="speedBtn" title="TAB to toggle">Speed: 1x</button>
     <button id="pauseBtn" title="P to toggle">Pause</button>
     <button id="restartBtn" title="Clear all stats and start over">Restart</button>
@@ -1383,7 +1683,7 @@ function updateAutoUi(state) {
   cmdInput.disabled = autoOn;
   cmdInput.placeholder = autoOn
     ? 'AUTO engaged — the planner is controlling all aircraft'
-    : 'CALLSIGN COMMAND (e.g. DL123 C 270)  --  Esc to release focus, click radar/strip to select';
+    : 'Callsign + Command, HELP to see manual, Esc to release focus, click radar/strip to auto-fill callsign';
 }
 
 function clearScript() {
@@ -1718,6 +2018,22 @@ document.querySelectorAll('.toggle-btn[data-dir]').forEach(btn => {
 document.getElementById('ratePlus').addEventListener('click', () => bumpSpawnRate(10));
 document.getElementById('rateMinus').addEventListener('click', () => bumpSpawnRate(-10));
 
+// --- User Manual modal --------------------------------------------------
+const helpModalEl = document.getElementById('helpModal');
+const helpBtn     = document.getElementById('helpBtn');
+const helpCloseBtn = document.getElementById('helpClose');
+function openHelp()  {
+  helpModalEl.style.display = 'flex';
+  helpModalEl.querySelector('#helpBody').scrollTop = 0;
+}
+function closeHelp() { helpModalEl.style.display = 'none'; }
+helpBtn.addEventListener('click', openHelp);
+helpCloseBtn.addEventListener('click', closeHelp);
+helpModalEl.addEventListener('click', (e) => { if (e.target === helpModalEl) closeHelp(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && helpModalEl.style.display === 'flex') closeHelp();
+});
+
 cmdInput.addEventListener('keydown', async (e) => {
   if (e.key === 'Escape') {
     cmdInput.blur();
@@ -1726,6 +2042,12 @@ cmdInput.addEventListener('keydown', async (e) => {
   if (e.key !== 'Enter') return;
   const text = cmdInput.value.trim();
   if (!text) return;
+  // HELP is caught entirely on the frontend — open the manual, no backend traffic.
+  if (text.toLowerCase() === 'help') {
+    openHelp();
+    cmdInput.value = '';
+    return;
+  }
   const parts = text.split(/\s+/);
   if (parts.length < 2) {
     cmdInput.value = '';
