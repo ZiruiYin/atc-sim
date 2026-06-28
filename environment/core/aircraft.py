@@ -472,9 +472,15 @@ class Aircraft:
                     else:
                         alt = int(first) * 1000
                         if alt > before['altitude']:
-                            buckets.append((BUCKET['alt'], f'climb and maintain {alt}'))
+                            txt = f'climb and maintain {alt}'
+                            if self.expedite_altitude:
+                                txt += ', expedite climb'
+                            buckets.append((BUCKET['alt'], txt))
                         elif alt < before['altitude']:
-                            buckets.append((BUCKET['alt'], f'descend and maintain {alt}'))
+                            txt = f'descend and maintain {alt}'
+                            if self.expedite_altitude:
+                                txt += ', expedite descent'
+                            buckets.append((BUCKET['alt'], txt))
                         else:
                             buckets.append((BUCKET['alt'], f'maintain {alt}'))
                 else:
@@ -487,11 +493,15 @@ class Aircraft:
             elif cmd_type == 'S':
                 spd = int(first)
                 if spd < before['airspeed']:
-                    buckets.append((BUCKET['speed'], f'reduce speed to {spd} knots'))
+                    txt = f'reduce speed to {spd} knots'
                 elif spd > before['airspeed']:
-                    buckets.append((BUCKET['speed'], f'increase speed to {spd} knots'))
+                    txt = f'increase speed to {spd} knots'
                 else:
-                    buckets.append((BUCKET['speed'], f'maintain {spd} knots'))
+                    txt = f'maintain {spd} knots'
+                # Expedite only makes sense when the speed actually changes.
+                if self.expedite_speed and spd != before['airspeed']:
+                    txt += ', expedite'
+                buckets.append((BUCKET['speed'], txt))
             elif cmd_type == 'H':
                 turn = parts[1] if len(parts) > 1 and parts[1] in ('L', 'R') else 'R'
                 word = 'left' if turn == 'L' else 'right'
@@ -506,14 +516,19 @@ class Aircraft:
                 # not already at it (a STAR target while still descending -> say
                 # "descend and maintain"); plain "maintain" only when already there.
                 maintain_alt = int(self.target_altitude)
+                exp = ''
                 if maintain_alt < before['altitude']:
                     verb = 'descend and maintain'
+                    if self.expedite_altitude:
+                        exp = ', expedite descent'
                 elif maintain_alt > before['altitude']:
                     verb = 'climb and maintain'
+                    if self.expedite_altitude:
+                        exp = ', expedite climb'
                 else:
                     verb = 'maintain'
                 buckets.append((BUCKET['land'],
-                                f'{verb} {maintain_alt} until established on the '
+                                f'{verb} {maintain_alt}{exp} until established on the '
                                 f'localizer, cleared ILS runway {param} approach'))
 
         buckets.sort(key=lambda b: b[0])
