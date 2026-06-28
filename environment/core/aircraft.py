@@ -414,6 +414,11 @@ class Aircraft:
 
         has_vector_cmd = False
         has_alt_cmd = False
+        # On an ILS clearance (TRACON) the altitude is folded into the approach
+        # clearance ("descend/climb and maintain X until established on the
+        # localizer"), so a standalone altitude phrase from the same command is
+        # suppressed to avoid stating the altitude twice.
+        has_land = any(ct == 'L' for ct, _ in command_pairs)
         for ct, p in command_pairs:
             if ct == 'C':
                 f = (p or '').split(';')[0]
@@ -462,13 +467,16 @@ class Aircraft:
                     else:
                         buckets.append((BUCKET['vector'], f'fly heading {hdg_disp:03d}'))
                 elif first.isdigit() and len(first) <= 2:
-                    alt = int(first) * 1000
-                    if alt > before['altitude']:
-                        buckets.append((BUCKET['alt'], f'climb and maintain {alt}'))
-                    elif alt < before['altitude']:
-                        buckets.append((BUCKET['alt'], f'descend and maintain {alt}'))
+                    if has_land:
+                        pass  # altitude is folded into the ILS clearance below
                     else:
-                        buckets.append((BUCKET['alt'], f'maintain {alt}'))
+                        alt = int(first) * 1000
+                        if alt > before['altitude']:
+                            buckets.append((BUCKET['alt'], f'climb and maintain {alt}'))
+                        elif alt < before['altitude']:
+                            buckets.append((BUCKET['alt'], f'descend and maintain {alt}'))
+                        else:
+                            buckets.append((BUCKET['alt'], f'maintain {alt}'))
                 else:
                     explicit = parts[1] if len(parts) > 1 and parts[1] in ('L', 'R') else None
                     if explicit:
@@ -489,7 +497,24 @@ class Aircraft:
                 word = 'left' if turn == 'L' else 'right'
                 buckets.append((BUCKET['hold'], f'hold over {first} {word} turn'))
             elif cmd_type == 'L':
-                buckets.append((BUCKET['land'], f'runway {param} cleared to land'))
+                # TRACON ILS clearance (FAA JO 7110.65 5-9-1): bring the aircraft
+                # to the platform altitude and hold it until established on the
+                # localizer, stated in one phrase. self.target_altitude is the
+                # assigned altitude -- from an altitude command in this chain OR
+                # carried over from the STAR. The verb keys off the *current*
+                # altitude, so a descent/climb is voiced whenever the aircraft is
+                # not already at it (a STAR target while still descending -> say
+                # "descend and maintain"); plain "maintain" only when already there.
+                maintain_alt = int(self.target_altitude)
+                if maintain_alt < before['altitude']:
+                    verb = 'descend and maintain'
+                elif maintain_alt > before['altitude']:
+                    verb = 'climb and maintain'
+                else:
+                    verb = 'maintain'
+                buckets.append((BUCKET['land'],
+                                f'{verb} {maintain_alt} until established on the '
+                                f'localizer, cleared ILS runway {param} approach'))
 
         buckets.sort(key=lambda b: b[0])
         phrases = [text for _, text in buckets]
@@ -499,8 +524,9 @@ class Aircraft:
         atc_body = ', '.join(phrases)
         atc = f'{self.callsign}, {atc_body}'
 
-        pilot_body = re.sub(r'runway (\S+) cleared to land', r'cleared to land runway \1', atc_body)
-        pilot_body = pilot_body.replace('go around', 'going around')
+        # Pilots read the instruction back as given, including the turn direction
+        # ("turn right heading 240"); only the callsign moves to the end.
+        pilot_body = atc_body.replace('go around', 'going around')
         pilot_body = pilot_body[:1].upper() + pilot_body[1:]
         pilot = f'{pilot_body}, {self.callsign}'
         return atc, pilot

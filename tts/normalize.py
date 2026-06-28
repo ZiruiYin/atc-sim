@@ -110,14 +110,17 @@ def _speak_callsign(cs: str) -> str:
 def _normalize_body(s: str) -> str:
     """Spell out the numeric tokens inside an instruction phrase. Speed is handled
     before altitude so 'maintain 200 knots' isn't read as an altitude."""
+    # Case-insensitive: the pilot readback capitalizes a leading "Heading 240".
     s = re.sub(r"heading (\d{3})",
-               lambda m: "heading " + _spell_digits(m.group(1)), s)
+               lambda m: "heading " + _spell_digits(m.group(1)), s, flags=re.IGNORECASE)
     s = re.sub(r"(\d+) knots",
                lambda m: _spell_digits(m.group(1)) + " knots", s)
     s = re.sub(r"(climb and maintain|descend and maintain|maintain) (\d+)",
                lambda m: f"{m.group(1)} {_speak_altitude(int(m.group(2)))}", s)
     s = re.sub(r"runway (\d{1,2}[LRC]?)",
                lambda m: "runway " + _speak_runway(m.group(1)), s)
+    # Spell ILS letter-by-letter ("I-L-S") so the TTS says the letters, not "ils".
+    s = s.replace("ILS", "I-L-S")
     return s
 
 
