@@ -26,5 +26,10 @@ COPY . .
 RUN chown -R user:user /app
 USER user
 
+# Pre-load the AUTO policy + worker pool at server boot so the first time a user
+# engages AUTO it's instant (no cold torch import / checkpoint load / process
+# spawn). See app.py:_warm_auto. Lazy (unset) for local runs.
+ENV ATC_WARM_AUTO=1
+
 EXPOSE 7860
 CMD ["python", "main.py", "--host", "0.0.0.0", "--port", "7860"]

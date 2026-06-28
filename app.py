@@ -306,9 +306,46 @@ def _warm_tts():
         print(f"[tts] warmup skipped: {e}")
 
 
-# Kick the warmup as soon as the backend is imported (i.e. when the game starts),
-# in a daemon thread so it never delays server startup or request handling.
-threading.Thread(target=_warm_tts, daemon=True).start()
+# Held for the life of the process so the warmed policy + worker pool aren't torn
+# down. Real sessions build their own planner but reuse the global worker pool
+# (keyed by checkpoint/runway, not by planner instance), plus a torch already
+# imported and a checkpoint already in the OS file cache -- so their first AUTO
+# engage skips the heavy one-time costs.
+_warm_auto_planner = None
+
+
+def _warm_auto():
+    """Pre-load the AUTO policy and spawn+warm its worker pool at boot, so the
+    first time a user switches AUTO on it engages without paying the one-time
+    cost of importing torch, loading the checkpoint, and (in pool mode) spawning
+    worker processes. Off by default; the Hugging Face image sets ATC_WARM_AUTO=1."""
+    global _warm_auto_planner
+    try:
+        from auto_plan.planner import AutoPlanner
+        planner = AutoPlanner(airport="test", runway="27", plan_steps=400)
+        st = planner.start()             # torch load + pool spawn/warm (idempotent)
+        _warm_auto_planner = planner
+        print(f"[auto] policy + pool warmed ({st.get('mode')}, "
+              f"{st.get('n_workers')} worker(s))")
+    except Exception as e:
+        print(f"[auto] warmup skipped: {e}")
+
+
+def _truthy(v):
+    return str(v).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+# Kick the warmups as soon as the backend is imported (i.e. when the server
+# starts), in daemon threads so they never delay startup or request handling.
+# TTS always warms (cheap, no subprocesses). AUTO warms only when opted in (it
+# spawns worker processes) -- the Hugging Face deployment sets ATC_WARM_AUTO=1.
+# The MainProcess guard keeps a multiprocessing spawn-child (should it ever
+# import this module) from re-launching the warmups.
+import multiprocessing as _mp
+if _mp.current_process().name == 'MainProcess':
+    threading.Thread(target=_warm_tts, daemon=True).start()
+    if _truthy(os.environ.get('ATC_WARM_AUTO', '')):
+        threading.Thread(target=_warm_auto, daemon=True).start()
 
 
 if __name__ == '__main__':
