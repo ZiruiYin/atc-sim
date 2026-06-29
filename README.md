@@ -14,8 +14,7 @@ A browser-based approach controller simulator. You vector inbound traffic onto t
 
 ## Run
 
-Play in the browser: <https://ziruiyin.github.io/atc-sim/>
-The Hugging Face deployment also has **AUTO** mode — a model that flies the aircraft for you (see the [AUTO](#auto) section): <https://huggingface.co/spaces/JerryYin14/ATC-SIM>
+Play in the browser: <https://huggingface.co/spaces/JerryYin14/ATC-SIM>
 
 Or run locally:
 
@@ -89,6 +88,7 @@ The top of the left column has the **airport selector** (SIMULATED / EGLL) and a
 
 ### Bottom — command bar
 
+- **Spoken command mode**: click the microphone once to start recording your command. Click again to send the audio.
 - **Command box**: type `CALLSIGN COMMAND` and press `Enter`. Press `Esc` to release focus. Clicking an aircraft on the radar, or a flight strip, pre-fills the callsign.
 - **Speed**: toggles 1× ⇄ 10× (also `Tab`). In 10×, the radar updates the same once-per-second cadence but the simulation advances 10 simulated seconds per update.
 - **Pause**: pauses the simulation (also `P`).
