@@ -78,3 +78,10 @@ tts_training/data/
 tts_training/models/
 # Scratch synth test wavs. (tts/voices/*.onnx ARE committed, via Git LFS.)
 tts/_*.wav
+
+# Parser training tooling lives on the `stt` branch only, never on `main`. This
+# guard (kept on main, intentionally absent on stt so new training files there
+# still track without -f) stops the leftover training data/scripts from being
+# re-committed to main by a stray `git add`. NOTE: a merge from stt still brings
+# the dir in as tracked files -> run `git rm -r dsl_parser_training` after merging.
+dsl_parser_training/
