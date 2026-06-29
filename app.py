@@ -453,18 +453,31 @@ def _truthy(v):
 # import this module) from re-launching the warmups.
 import multiprocessing as _mp
 if _mp.current_process().name == 'MainProcess':
-    # Warm the whole voice service (TTS + STT + parser) at boot, each in its own
-    # daemon thread so they load in PARALLEL and one failing can't block another --
-    # important for hosting: a freshly-deployed instance is ready by the time the
-    # first user interacts, instead of paying a cold model load on the first call.
-    threading.Thread(target=_warm_tts, daemon=True).start()
-    if _truthy(os.environ.get('ATC_WARM_STT', '1')):
-        threading.Thread(target=_warm_stt, daemon=True).start()
-    if _truthy(os.environ.get('ATC_WARM_PARSER', '1')):
-        threading.Thread(target=_warm_parser, daemon=True).start()
-    # AUTO stays opt-in (heavy: spawns worker processes), not part of the voice path.
-    if _truthy(os.environ.get('ATC_WARM_AUTO', '')):
-        threading.Thread(target=_warm_auto, daemon=True).start()
+    # Warm the voice service (TTS + STT + parser) at boot. CRITICAL: the warmups
+    # must run SEQUENTIALLY in ONE thread, not in parallel. Each pulls in heavy
+    # native extensions (numpy, torch, ctranslate2, onnxruntime) whose first-time
+    # imports are NOT thread-safe: concurrent imports race into numpy's "partially
+    # initialized module / circular import" and ctranslate2's "cannot load module
+    # more than once per process", wedging the whole process (observed on the HF
+    # cold start). So we (1) force numpy to initialize once here in the MAIN thread,
+    # then (2) run the warmups one-after-another in a single daemon thread -- every
+    # native init stays single-threaded, and startup/serving is still never blocked.
+    try:
+        import numpy  # noqa: F401  -- single-threaded numpy init before any warmup
+    except Exception as e:
+        print(f"[warmup] numpy preimport skipped: {e}")
+
+    def _warm_all():
+        _warm_tts()
+        if _truthy(os.environ.get('ATC_WARM_STT', '1')):
+            _warm_stt()
+        if _truthy(os.environ.get('ATC_WARM_PARSER', '1')):
+            _warm_parser()
+        # AUTO stays opt-in (heavy: spawns worker processes), not part of the voice path.
+        if _truthy(os.environ.get('ATC_WARM_AUTO', '')):
+            _warm_auto()
+
+    threading.Thread(target=_warm_all, daemon=True).start()
 
 
 if __name__ == '__main__':
