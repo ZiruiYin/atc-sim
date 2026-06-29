@@ -4,6 +4,14 @@ from environment.params import *
 from environment.utils import *
 
 class Aircraft:
+    # Fields _apply_command may mutate; snapshotted for atomic command application.
+    _ATOMIC_FIELDS = (
+        'target_heading', 'target_altitude', 'target_airspeed', 'target_wpt',
+        'turn_direction', 'holding', 'hold_direction', 'holding_outbound', 'star',
+        'star_apply_alt', 'star_apply_spd', 'expedite_altitude', 'expedite_speed',
+        'ils_runway', 'loc_intercepted', 'gs_intercepted', 'short_final',
+    )
+
     def __init__(self, callsign, initial_x, initial_y, heading, altitude, airspeed,
                  nm_per_pixel, coords):
         self.callsign = callsign
@@ -400,9 +408,16 @@ class Aircraft:
             'altitude': self.altitude,
             'airspeed': self.airspeed,
         }
+        # Apply atomically: snapshot every field _apply_command can touch and roll
+        # back if any pair in the chain fails, so a rejected command moves nothing
+        # (the voice/STT loop relies on this -- a failed parse must not nudge the
+        # aircraft, only ask the pilot to "say again").
+        snapshot = {f: getattr(self, f) for f in self._ATOMIC_FIELDS}
         for cmd_type, param in command_pairs:
             err = self._apply_command(cmd_type, param)
             if err:
+                for f, v in snapshot.items():
+                    setattr(self, f, v)
                 return {'ok': False, 'category': 'unable', 'message': err}
 
         atc, pilot = self._build_radio_messages(command_pairs, before)

@@ -1,3 +1,4 @@
 auto_plan/best.pt filter=lfs diff=lfs merge=lfs -text
 tts/voices/*.onnx filter=lfs diff=lfs merge=lfs -text
+dsl_parser/model/*.safetensors filter=lfs diff=lfs merge=lfs -text
 dsl_parser/model/spiece.model filter=lfs diff=lfs merge=lfs -text

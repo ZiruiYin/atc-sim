@@ -8,6 +8,15 @@ from werkzeug.serving import WSGIRequestHandler
 
 from environment import SimulationEnv
 
+# Keep the CPU model runtimes (torch parser, CTranslate2 STT) from SPIN-WAITING
+# their thread pools between bursts -- a spinning pool busy-loops cores and starves
+# the 1s /step sim tick, making the radar limp one-fast-one-slow (same failure mode
+# as the onnxruntime no-spin fix in tts/synth.py). On a 12-core dev box there's
+# headroom so it hides; on a 2-vCPU host it bites. Must be set before those libs
+# import (they load lazily in warmup/endpoints, after this).
+os.environ.setdefault("OMP_WAIT_POLICY", "PASSIVE")   # threads sleep when idle
+os.environ.setdefault("KMP_BLOCKTIME", "0")           # Intel OpenMP: no post-region spin
+
 # Repo root is also the GitHub Pages root. We serve index.html and the
 # environment/ tree from here so the same paths work both ways:
 #   - Local Flask:   http://127.0.0.1:5000/{environment/foo, env_manifest.json}
@@ -155,8 +164,12 @@ def state():
     return jsonify(get_session().state_payload())
 
 
-@app.route('/step', methods=['POST'])
+@app.route('/step', methods=['GET', 'POST'])
 def step():
+    # GET (bodiless) is the normal path -- a POST with a tiny body triggers the
+    # Chrome-on-Windows split-segment + delayed-ACK stall that limps the radar
+    # (see HttpEngine.step in index.html). /step reads no request body. POST is
+    # kept for backward compat. no-store so the browser never caches a GET /step.
     sess = get_session()
     if sess.auto_on and sess.is_simulated() and sess.auto_planner is not None:
         # The planner runs its own fast_forward loop and HOLDS the sim while a
@@ -166,7 +179,9 @@ def step():
     else:
         for _ in range(sess.sim.fast_forward):
             sess.sim.step(1.0)
-    return jsonify(sess.state_payload())
+    resp = jsonify(sess.state_payload())
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
 
 
 @app.route('/command', methods=['POST'])
@@ -205,6 +220,71 @@ def tts():
     except Exception as e:                       # piper missing / synth failure
         return jsonify({"ok": False, "message": str(e)}), 500
     return Response(wav, mimetype='audio/wav')
+
+
+@app.route('/stt', methods=['POST'])
+def stt():
+    """Full voice service: audio -> transcript -> DSL -> validate/execute, closing
+    the loop. Body is raw audio bytes (the browser's MediaRecorder blob).
+
+    Returns {ok, transcript, ...} where `result` is one of:
+      success   -> command executed; {atc, pilot} readback to render + speak
+      say_again -> callsign matched a live aircraft but the command was invalid;
+                   {pilot:"Say again, <cs>"} to render + speak (no aircraft moved)
+      no_match  -> parsed callsign matches no live aircraft; {message}
+      empty     -> no speech recognized
+      no_model  -> STT only (no parser checkpoint on disk) -> just the transcript
+
+    The transcript is always returned for the purple script line."""
+    audio = request.get_data()
+    if not audio:
+        return jsonify({"ok": False, "message": "no audio"}), 400
+    try:
+        from stt import transcribe
+        transcript = transcribe(audio)
+    except Exception as e:                       # model missing / decode failure
+        return jsonify({"ok": False, "message": str(e)}), 500
+
+    resp = {"ok": True, "transcript": transcript}
+    if not transcript:
+        resp["result"] = "empty"
+        return jsonify(resp)
+
+    # transcript -> DSL (part 2). Degrade to transcript-only if no parser model.
+    try:
+        import dsl_parser
+        if not dsl_parser.available():
+            resp["result"] = "no_model"
+            return jsonify(resp)
+        dsl = dsl_parser.parse(transcript)
+    except Exception as e:
+        resp["result"] = "no_model"
+        resp["message"] = str(e)
+        return jsonify(resp)
+
+    resp["dsl"] = dsl
+    toks = dsl.split()
+    if len(toks) < 2:
+        resp["result"] = "unparsed"
+        return jsonify(resp)
+
+    callsign, command = toks[0], " ".join(toks[1:])
+    resp["callsign"] = callsign
+
+    # Validate + (atomically) execute against THIS session's sim.
+    sess = get_session()
+    result = sess.sim.command(callsign, command)
+    if not result.get("callsign_valid", False):
+        resp["result"] = "no_match"
+        resp["message"] = f"callsign no match: {callsign}"
+    elif not result.get("ok"):
+        resp["result"] = "say_again"
+        resp["pilot"] = f"Say again, {callsign}"
+    else:
+        resp["result"] = "success"
+        resp["atc"] = result.get("atc")
+        resp["pilot"] = result.get("pilot")
+    return jsonify(resp)
 
 
 @app.route('/speed', methods=['POST'])
@@ -331,6 +411,36 @@ def _warm_auto():
         print(f"[auto] warmup skipped: {e}")
 
 
+def _warm_stt():
+    """Pre-load the STT model at boot so the first mic press transcribes without
+    paying the one-time model load. On by default; set ATC_WARM_STT=0 to skip
+    (e.g. offline, to avoid the model download on a machine's first run). The
+    backend is chosen by ATC_STT_BACKEND (moonshine default | whisper). Runs in a
+    daemon thread, so it never blocks startup either way."""
+    try:
+        from stt import warmup, BACKEND
+        warmup()
+        print(f"[stt] model warmed (backend={BACKEND})")
+    except Exception as e:                       # model/package missing / no net
+        print(f"[stt] warmup skipped: {e}")
+
+
+def _warm_parser():
+    """Pre-load the text->DSL parser model at boot so the first voice command
+    parses without paying the one-time model load. On by default; set
+    ATC_WARM_PARSER=0 to skip. No-op (transcript-only) if no checkpoint is on
+    disk. Runs in a daemon thread, so it never blocks startup."""
+    try:
+        import dsl_parser
+        if dsl_parser.available():
+            dsl_parser.warmup()
+            print("[parser] DSL parser model warmed")
+        else:
+            print(f"[parser] no checkpoint at {dsl_parser.CKPT}; /stt stays transcript-only")
+    except Exception as e:                       # transformers/torch missing
+        print(f"[parser] warmup skipped: {e}")
+
+
 def _truthy(v):
     return str(v).strip().lower() in ('1', 'true', 'yes', 'on')
 
@@ -343,7 +453,16 @@ def _truthy(v):
 # import this module) from re-launching the warmups.
 import multiprocessing as _mp
 if _mp.current_process().name == 'MainProcess':
+    # Warm the whole voice service (TTS + STT + parser) at boot, each in its own
+    # daemon thread so they load in PARALLEL and one failing can't block another --
+    # important for hosting: a freshly-deployed instance is ready by the time the
+    # first user interacts, instead of paying a cold model load on the first call.
     threading.Thread(target=_warm_tts, daemon=True).start()
+    if _truthy(os.environ.get('ATC_WARM_STT', '1')):
+        threading.Thread(target=_warm_stt, daemon=True).start()
+    if _truthy(os.environ.get('ATC_WARM_PARSER', '1')):
+        threading.Thread(target=_warm_parser, daemon=True).start()
+    # AUTO stays opt-in (heavy: spawns worker processes), not part of the voice path.
     if _truthy(os.environ.get('ATC_WARM_AUTO', '')):
         threading.Thread(target=_warm_auto, daemon=True).start()
 

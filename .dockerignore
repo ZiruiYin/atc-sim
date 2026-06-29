@@ -5,3 +5,6 @@ __pycache__
 doc
 build_pages.py
 .nojekyll
+# Training tooling + data; runtime uses dsl_parser/ (the shipped checkpoint),
+# not dsl_parser_training/. Keeps ~9MB of eval audio + scripts out of the image.
+dsl_parser_training

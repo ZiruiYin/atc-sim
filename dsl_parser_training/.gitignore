@@ -1,0 +1,9 @@
+# generated training artifacts
+data/
+runs/
+sample_commands.txt
+sample_pairs.txt
+sample_commands_augmented.txt
+eval_samples.jsonl
+eval_audio/
+eval_results.txt
