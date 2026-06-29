@@ -85,9 +85,14 @@ def render(text: str, is_controller: bool, controller_voice: bool | None = None)
 
 
 def warmup() -> None:
-    """Pre-load both voices (call at server start to avoid first-request latency)."""
-    _voice(True)
-    _voice(False)
+    """Pre-load both voices AND synth one tiny line each, so the first real request
+    pays neither the load NOR onnxruntime's first-run setup (lazily initialized on
+    the first inference)."""
+    for cv in (True, False):
+        try:
+            synthesize_wav_bytes("warm up", cv)
+        except Exception:
+            _voice(cv)        # at least ensure the voice is loaded
 
 
 if __name__ == "__main__":

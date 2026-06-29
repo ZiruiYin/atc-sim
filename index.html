@@ -92,6 +92,11 @@
     color: #ffe0b8;
     border-left-color: #e0a040;
   }
+  .script-msg.stt {
+    background: rgba(120, 80, 170, 0.20);
+    color: #e3d4f5;
+    border-left-color: #9a6fd0;
+  }
   #scriptList:empty::before {
     content: "(no transmissions)";
     color: #555;
@@ -301,6 +306,27 @@
     outline: none;
   }
   #cmd:focus { border-color: #4caf50; }
+  #micBtn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 10px;
+  }
+  #micBtn svg { display: block; }
+  #micBtn.recording {
+    background: #b03030;
+    color: #fff;
+    border-color: #d04848;
+    animation: micpulse 1s ease-in-out infinite;
+  }
+  #micBtn.busy { cursor: default; color: #9a6fd0; }
+  @keyframes micpulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(208, 72, 72, 0.6); }
+    50%      { box-shadow: 0 0 0 6px rgba(208, 72, 72, 0); }
+  }
+  .mic-spin { animation: micspin 0.7s linear infinite; transform-origin: center; }
+  @keyframes micspin { to { transform: rotate(360deg); } }
   button {
     background: #333;
     color: #ddd;
@@ -980,6 +1006,7 @@ BA42 C 270 C 5 S 200 L 27R</code></pre>
     </div>
   </div>
   <div id="controls">
+    <button id="micBtn" title="Click to record a voice command, click again to transcribe" aria-label="Record voice command"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
     <input id="cmd" type="text" placeholder="Callsign + Command, HELP to see manual, Esc to release focus, click radar/strip to auto-fill callsign" autocomplete="off" />
     <button id="speedBtn" title="TAB to toggle">Speed: 1x</button>
     <button id="pauseBtn" title="P to toggle">Pause</button>
@@ -1102,7 +1129,11 @@ async function getJson(url) {
 class HttpEngine {
   async init() { /* nothing to do — Flask is already running */ }
   state()                    { return getJson('/state'); }
-  step()                     { return postJson('/step', {}); }
+  // GET (bodiless), not POST: Chrome on Windows splits a POST's headers+body into
+  // two TCP segments and waits ~200ms (delayed-ACK) between them, stalling every
+  // other /step and making the radar limp one-fast-one-slow. A GET has no body, so
+  // no split, no stall. (/step reads no request body anyway.)
+  step()                     { return getJson('/step'); }
   command(callsign, command) { return postJson('/command', {callsign, command}); }
   setSpeed(multiplier)       { return postJson('/speed', {multiplier}); }
   setSpawnRate(rate)         { return postJson('/spawn_rate', {rate}); }
@@ -1716,6 +1747,10 @@ async function init() {
     await engine.init();
   }
   backendAvailable = !!(engine && engine.hasAuto);
+  // Voice mic is backend-only (STT + t5 parser run on Flask; both absent in the
+  // Pyodide build), so hide it on the static GitHub Pages deploy -- same gate as
+  // AUTO. The backend (HF) shows it; the static site won't expose a dead mic.
+  micBtn.style.display = backendAvailable ? '' : 'none';
   const state = await engine.state();
   staticData = state.static;
   resizeCanvas(staticData.radar_side);
@@ -1735,7 +1770,7 @@ async function init() {
 }
 
 const TICK_MS = 1000;
-const TICK_DEBUG = false;  // set true to log per-frame timing (late/fetch/draw) to console
+const TICK_DEBUG = true;   // set true to log per-frame timing (late/fetch/draw) to console
 
 function perfNow() {
   return (typeof performance !== 'undefined' && performance.now)
@@ -2066,6 +2101,108 @@ cmdInput.addEventListener('keydown', async (e) => {
     speakExchange(r.atc, r.pilot);
     cmdInput.value = '';
   }
+});
+
+// --- STT: mic -> audio -> raw text (part 1) -------------------------------
+// Click the mic to start recording; click again to stop, capture the clip, and
+// POST it to /stt for transcription. The raw transcript is logged to the script
+// panel (part 2, text->DSL, is done separately). Silent no-op if there's no /stt
+// backend or the browser blocks the mic.
+const micBtn = document.getElementById('micBtn');
+let mediaRecorder = null;
+let recChunks = [];
+let recStream = null;
+// Single source of truth for the button state so an in-flight transcription
+// can't clobber a fresh recording. While 'busy' (transcribing) the button is
+// inert -- clicks are ignored -- so there's no overlap to overwrite.
+let micState = 'idle';   // 'idle' | 'recording' | 'busy'
+
+const MIC_SVG = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+const SPIN_SVG = '<svg class="mic-spin" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>';
+
+function setMicState(state) {
+  micState = state;
+  micBtn.classList.toggle('recording', state === 'recording');
+  micBtn.classList.toggle('busy', state === 'busy');
+  micBtn.innerHTML = state === 'busy' ? SPIN_SVG : MIC_SVG;
+  micBtn.title = state === 'recording'
+    ? 'Recording — click to stop and transcribe'
+    : state === 'busy'
+      ? 'Transcribing…'
+      : 'Click to record a voice command, click again to transcribe';
+}
+
+async function startRecording() {
+  try {
+    recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    appendScript('invalid', 'MIC: microphone access denied');
+    return;
+  }
+  recChunks = [];
+  mediaRecorder = new MediaRecorder(recStream);
+  mediaRecorder.ondataavailable = (ev) => { if (ev.data.size > 0) recChunks.push(ev.data); };
+  mediaRecorder.onstop = transcribeRecording;
+  mediaRecorder.start();
+  setMicState('recording');
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  setMicState('busy');
+}
+
+async function transcribeRecording() {
+  if (recStream) { recStream.getTracks().forEach((t) => t.stop()); recStream = null; }
+  const blob = new Blob(recChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+  recChunks = [];
+  if (!blob.size) { setMicState('idle'); return; }
+  try {
+    const resp = await fetch('/stt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream', 'X-Session-Id': SESSION_ID },
+      body: blob,
+    });
+    const r = await resp.json();
+    // Always show the recognized transcript in the purple script line.
+    if (r && r.transcript) appendScript('stt', r.transcript);
+    if (!r || !r.ok) {
+      appendScript('invalid', `STT: ${(r && r.message) || 'error'}`);
+      setMicState('idle');
+      return;
+    }
+    switch (r.result) {
+      case 'success':                      // executed -> pilot readback ONLY.
+        // The human is the controller, so don't echo their own instruction back:
+        // no ATC script line, no controller audio. The purple transcript already
+        // shows what they said; the pilot readback (line + audio) confirms it.
+        if (r.pilot) appendScript('pilot', r.pilot);
+        speakExchange(null, r.pilot);
+        break;
+      case 'say_again':                    // callsign matched, command invalid (nothing moved)
+        if (r.pilot) { appendScript('pilot', r.pilot); speakExchange(null, r.pilot); }
+        break;
+      case 'no_match':                     // callsign matches no live aircraft
+        appendScript('invalid', r.message || 'callsign no match');
+        break;
+      case 'empty':
+        appendScript('invalid', 'no speech recognized');
+        break;
+      case 'unparsed':
+        appendScript('invalid', 'could not parse a command');
+        break;
+      // 'no_model': transcript already shown; parsing unavailable -> nothing more.
+    }
+  } catch (e) {
+    appendScript('invalid', `STT error: ${e}`);
+  }
+  setMicState('idle');
+}
+
+micBtn.addEventListener('click', () => {
+  if (micState === 'recording') stopRecording();
+  else if (micState === 'idle') startRecording();
+  // micState === 'busy': transcription in flight -- ignore the click.
 });
 
 // --- TTS playback (manual commands only) ---------------------------------

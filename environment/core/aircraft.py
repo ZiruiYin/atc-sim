@@ -4,6 +4,14 @@ from environment.params import *
 from environment.utils import *
 
 class Aircraft:
+    # Fields _apply_command may mutate; snapshotted for atomic command application.
+    _ATOMIC_FIELDS = (
+        'target_heading', 'target_altitude', 'target_airspeed', 'target_wpt',
+        'turn_direction', 'holding', 'hold_direction', 'holding_outbound', 'star',
+        'star_apply_alt', 'star_apply_spd', 'expedite_altitude', 'expedite_speed',
+        'ils_runway', 'loc_intercepted', 'gs_intercepted', 'short_final',
+    )
+
     def __init__(self, callsign, initial_x, initial_y, heading, altitude, airspeed,
                  nm_per_pixel, coords):
         self.callsign = callsign
@@ -400,24 +408,26 @@ class Aircraft:
             'altitude': self.altitude,
             'airspeed': self.airspeed,
         }
+        # Apply atomically: snapshot every field _apply_command can touch and roll
+        # back if any pair in the chain fails, so a rejected command moves nothing
+        # (the voice/STT loop relies on this -- a failed parse must not nudge the
+        # aircraft, only ask the pilot to "say again").
+        snapshot = {f: getattr(self, f) for f in self._ATOMIC_FIELDS}
         for cmd_type, param in command_pairs:
             err = self._apply_command(cmd_type, param)
             if err:
+                for f, v in snapshot.items():
+                    setattr(self, f, v)
                 return {'ok': False, 'category': 'unable', 'message': err}
 
         atc, pilot = self._build_radio_messages(command_pairs, before)
         return {'ok': True, 'category': 'success', 'atc': atc, 'pilot': pilot}
 
     def _build_radio_messages(self, command_pairs, before):
-        # bucket index for each phrase: A first, then vector, alt, speed, hold, land
         BUCKET = {'a': 0, 'vector': 1, 'alt': 2, 'speed': 3, 'hold': 1, 'land': 4}
 
         has_vector_cmd = False
         has_alt_cmd = False
-        # On an ILS clearance (TRACON) the altitude is folded into the approach
-        # clearance ("descend/climb and maintain X until established on the
-        # localizer"), so a standalone altitude phrase from the same command is
-        # suppressed to avoid stating the altitude twice.
         has_land = any(ct == 'L' for ct, _ in command_pairs)
         for ct, p in command_pairs:
             if ct == 'C':
@@ -448,7 +458,6 @@ class Aircraft:
             if cmd_type == 'C':
                 if first.isdigit() and len(first) == 3:
                     hdg = int(first)
-                    # Spoken/written heading uses 360 for north, never 000.
                     hdg_disp = hdg % 360 or 360
                     explicit = parts[1] if len(parts) > 1 and parts[1] in ('L', 'R') else None
                     turn_dir = explicit
@@ -468,7 +477,7 @@ class Aircraft:
                         buckets.append((BUCKET['vector'], f'fly heading {hdg_disp:03d}'))
                 elif first.isdigit() and len(first) <= 2:
                     if has_land:
-                        pass  # altitude is folded into the ILS clearance below
+                        pass
                     else:
                         alt = int(first) * 1000
                         if alt > before['altitude']:
@@ -498,7 +507,6 @@ class Aircraft:
                     txt = f'increase speed to {spd} knots'
                 else:
                     txt = f'maintain {spd} knots'
-                # Expedite only makes sense when the speed actually changes.
                 if self.expedite_speed and spd != before['airspeed']:
                     txt += ', expedite'
                 buckets.append((BUCKET['speed'], txt))
@@ -507,14 +515,6 @@ class Aircraft:
                 word = 'left' if turn == 'L' else 'right'
                 buckets.append((BUCKET['hold'], f'hold over {first} {word} turn'))
             elif cmd_type == 'L':
-                # TRACON ILS clearance (FAA JO 7110.65 5-9-1): bring the aircraft
-                # to the platform altitude and hold it until established on the
-                # localizer, stated in one phrase. self.target_altitude is the
-                # assigned altitude -- from an altitude command in this chain OR
-                # carried over from the STAR. The verb keys off the *current*
-                # altitude, so a descent/climb is voiced whenever the aircraft is
-                # not already at it (a STAR target while still descending -> say
-                # "descend and maintain"); plain "maintain" only when already there.
                 maintain_alt = int(self.target_altitude)
                 exp = ''
                 if maintain_alt < before['altitude']:
@@ -539,8 +539,6 @@ class Aircraft:
         atc_body = ', '.join(phrases)
         atc = f'{self.callsign}, {atc_body}'
 
-        # Pilots read the instruction back as given, including the turn direction
-        # ("turn right heading 240"); only the callsign moves to the end.
         pilot_body = atc_body.replace('go around', 'going around')
         pilot_body = pilot_body[:1].upper() + pilot_body[1:]
         pilot = f'{pilot_body}, {self.callsign}'

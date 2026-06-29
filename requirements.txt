@@ -1,6 +1,7 @@
 # Core simulator (Flask backend + local play). The GitHub Pages deployment
 # runs the sim in-browser via Pyodide and needs NONE of these.
 flask>=2.0
+waitress>=3.0   # production WSGI server (main.py prefers it over the dev server)
 
 # --- AUTO planner (backend-only) ---------------------------------------------
 # Required only to run the AUTO autopilot (auto_plan/). Not needed for human
@@ -14,3 +15,10 @@ torch>=2.1
 # Controller/pilot speech via Piper (onnxruntime + bundled espeak-ng; no torch).
 # Needed for the /tts route + tts/ package. Not used by the Pyodide build.
 piper-tts>=1.4
+
+# --- Voice commands: STT + text->DSL parser (backend-only) -------------------
+# faster-whisper: controller audio -> raw text (stt/ package, /stt route).
+# transformers:   raw text -> sim command DSL (dsl_parser/, reuses the torch above).
+# Both back the voice mic; not used by the Pyodide build.
+faster-whisper>=1.0
+transformers>=4.40
